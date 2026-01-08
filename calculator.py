@@ -33,6 +33,8 @@ class InsulinCalculator:
                        emotion: str, 
                        history: List[Log],
                        duration_minutes: int = 0,
+                       intensity: str = "Moderate", # Slow, Moderate, Fast
+                       user_weight: float = 70.0,
                        manual_last_bolus_min: Optional[int] = None) -> dict:
         
         current_time = datetime.now()
@@ -55,6 +57,7 @@ class InsulinCalculator:
         modifier_percent = 0.0
         
         # Activity Factors (Dynamic)
+        # These are BASE modifiers for Moderate intensity
         activity_factors = {
             "Gym/Weights": self.settings.mod_gym,
             "Running": self.settings.mod_run,
@@ -63,7 +66,7 @@ class InsulinCalculator:
             "None": 0.0
         }
         
-        # Emotion Factors (Dynamic)
+        # Emotion Factors
         emotion_factors = {
             "Stress": self.settings.mod_stress,
             "Anxious": self.settings.mod_anxious,
@@ -73,35 +76,71 @@ class InsulinCalculator:
         base_act_mod = activity_factors.get(activity, 0.0)
         emo_mod = emotion_factors.get(emotion, 0.0)
         
+        # --- METs & Intensity Logic ---
+        # Map Activity + Intensity -> METs
+        # Default METs (Moderate)
+        met_defaults = {
+            "Gym/Weights": 5.0,
+            "Running": 9.8, 
+            "Swimming": 8.0,
+            "Beach Tennis": 7.3,
+            "None": 1.0
+        }
+        
+        # Intensity Multipliers for METs
+        # Slow 0.8x, Moderate 1.0x, Fast 1.25x
+        met_mult = 1.0
+        if intensity == "Slow": met_mult = 0.8
+        elif intensity == "Fast": met_mult = 1.25
+        
+        base_mets = met_defaults.get(activity, 1.0)
+        final_mets = base_mets * met_mult
+        
+        # Energy Expenditure = METs * Weight(kg) * Time(hours)
+        hours = duration_minutes / 60.0
+        energy_expended = final_mets * user_weight * hours
+        
+        # --- Intensity Scaling for Insulin Reduction ---
+        # If High Intensity (> 12 METs), increase reduction (1.3x)
+        # If Low Intensity (< 6 METs), maybe decrease? Keeping standard for now.
+        
+        intensity_impact_factor = 1.0
+        intensity_note = ""
+        
+        if final_mets >= 12.0:
+            intensity_impact_factor = 1.25 # Increase reduction by 25%
+            intensity_note = " (High Intensity: Extra Reduction)"
+        
+        scaled_base_act_mod = base_act_mod * intensity_impact_factor
+        
         # --- Duration Scaling Logic ---
-        act_mod = base_act_mod
+        act_mod = scaled_base_act_mod
         carb_refuel_msg = None
         scaling_note = ""
 
         if activity != "None" and duration_minutes > 0:
              if duration_minutes < 20:
-                 act_mod = base_act_mod * 0.5
-                 scaling_note = f" (Short {duration_minutes}m: 50% impact)"
+                 act_mod = scaled_base_act_mod * 0.5
+                 scaling_note = f" (Short {duration_minutes}m)"
              elif 20 <= duration_minutes < 50:
-                 act_mod = base_act_mod 
-                 scaling_note = f" (Standard {duration_minutes}m)"
+                 act_mod = scaled_base_act_mod 
+                 scaling_note = f" (Standard)"
              elif 50 <= duration_minutes < 90:
-                 act_mod = base_act_mod * 1.5
-                 scaling_note = f" (Long {duration_minutes}m: 1.5x impact)"
+                 act_mod = scaled_base_act_mod * 1.5
+                 scaling_note = f" (Long)"
              else: # >= 90
-                 potential = base_act_mod * 1.5
+                 potential = scaled_base_act_mod * 1.5
                  # Cap at -0.50 (Max Safe Reduction)
                  if potential < -0.50:
                      act_mod = -0.50
                  else:
                      act_mod = potential
                      
-                 scaling_note = f" (Endurance {duration_minutes}m: Capped at -50%)"
+                 scaling_note = f" (Endurance: Capped)"
                  carb_refuel_msg = "Recommendation: Carb Refuel (15-30g) every hour."
         
-        # Priority Rule: If Exercise (usually lowers) and Stress (raises) are both present
-        # We assume "Exercise" is the one that lowers glucose (negative factor)
-        # If activity lowers glucose (< 0) and emotion raises glucose (> 0), ignore emotion.
+        # Combine notes
+        full_activity_note = f"{intensity_note}{scaling_note}"
         
         # --- Peak Window Logic (Hard Override) ---
         last_bolus_mins = 9999
@@ -129,25 +168,13 @@ class InsulinCalculator:
             # Standard Logic
             if act_mod < 0 and emo_mod > 0:
                 final_modifier = act_mod
-                notes = f"Priority Rule: Ignored emotion due to exercise.{scaling_note}"
+                notes = f"Priority Rule: Ignored emotion.{full_activity_note}"
             else:
                 final_modifier = act_mod + emo_mod
-                if scaling_note:
-                    notes = f"Standard modifiers.{scaling_note}"
+                if full_activity_note:
+                    notes = f"Standard.{full_activity_note}"
                 else:
                     notes = "Standard modifiers applied."
-                
-            if is_peak_window:
-                 # In window but no activity, still alert? User said "AND Activity == True" for the reduction.
-                 # But UI status might want to show peak anyway? 
-                 # Request says: visual status... State A (During Peak).
-                 # Let's set HIGH if in Window, but only reduce if Active?
-                 # "Risk of hypoglycemia is tied to Peak Moment... IF Time... AND Activity... THEN Reduce"
-                 # "State A (During Peak): Display PEAK ACTION".
-                 # So risk state is HIGH (Time based), but reduction is conditional.
-                 # Actually, "Exercise Risk: HIGH". So if I am NOT exercising, is the risk high?
-                 # Let's stick to: In Window = Peak Action state.
-                 risk_state = "HIGH"
             
         adjusted_insulin = gross_insulin * (1 + final_modifier)
         
@@ -179,5 +206,7 @@ class InsulinCalculator:
             "recommended_dose": recommended_dose,
             "risk_state": risk_state,
             "notes": notes,
-            "carb_refuel_msg": carb_refuel_msg
+            "carb_refuel_msg": carb_refuel_msg,
+            "energy_expended": int(energy_expended),
+            "mets": round(final_mets, 1)
         }

@@ -17,12 +17,15 @@ class Settings(Base):
     target_glucose = Column(Integer, default=90) # Target Blood Glucose
     correction_threshold = Column(Integer, default=120) # Threshold for correction
 
-    
+
     # Dynamic Modifiers (Activity)
     mod_gym = Column(Float, default=0.10)
     mod_run = Column(Float, default=-0.30)
     mod_swim = Column(Float, default=-0.30)
     mod_beach_tennis = Column(Float, default=-0.20)
+    
+    # Personal Params
+    weight = Column(Float, default=70.0) # kg
     
     # Dynamic Modifiers (Emotion)
     mod_stress = Column(Float, default=0.20)
@@ -82,11 +85,27 @@ DATABASE_URL = "sqlite:///./diabetes.db"
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+from sqlalchemy import text
+
 def init_db():
     Base.metadata.create_all(bind=engine)
     
-    # Create default settings if not exists
+    # Auto-migration for 'weight' column
     session = SessionLocal()
+    try:
+        session.execute(text("SELECT weight FROM settings LIMIT 1"))
+    except Exception:
+        print("Migrating DB: Adding weight column...")
+        session.rollback() # Clear error state
+        try:
+            session.execute(text("ALTER TABLE settings ADD COLUMN weight FLOAT DEFAULT 70.0"))
+            session.commit()
+            print("Migration successful.")
+        except Exception as e:
+            print(f"Migration failed: {e}")
+            
+    # Create default settings if not exists
+    # Now safe to query Settings because schema matches
     if session.query(Settings).count() == 0:
         default_settings = Settings()
         session.add(default_settings)

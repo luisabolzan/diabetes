@@ -26,6 +26,7 @@ def save_settings(s_input):
     settings.target_glucose = int(s_input['target_glucose'])
     settings.correction_threshold = int(s_input['correction_threshold'])
     settings.correction_threshold = int(s_input['correction_threshold'])
+    settings.weight = float(s_input.get('weight', 70.0))
     # Duration removed
     
     # Save Dynamic Modifiers
@@ -308,10 +309,23 @@ def main_page():
                     def add_to_plate(val):
                         if not val: return
                         
-                        # Fix: ui.select might return the whole dict {'label':..., 'value':...} or just value
+                        # Handle potential dict input from ui.select
                         food_id = val
-                        if isinstance(val, dict):
-                            food_id = val.get('value')
+                        if isinstance(val, dict) and 'value' in val:
+                            food_id = val['value']
+                        
+                        # Ensure ID is valid (int)
+                        try:
+                            food_id = int(food_id)
+                        except (ValueError, TypeError):
+                             # Fallback: if somehow it's still a dict or weird object, try to extract 'value' if possible
+                             if hasattr(val, 'get'):
+                                 try:
+                                     food_id = int(val.get('value'))
+                                 except:
+                                     return
+                             else:
+                                 return
                         
                         session = SessionLocal()
                         food_item = session.query(Food).filter(Food.id == food_id).first()
@@ -387,6 +401,11 @@ def main_page():
 
                     duration_input = ui.number(label='Duration (min)', value=30, format='%.0f').classes('w-full input-field').props('dark filled')
                 
+                intensity_select = ui.select(
+                    ['Slow', 'Moderate', 'Fast'],
+                    label='Intensity (Speed/Effort)', value='Moderate'
+                ).classes('w-full q-mt-sm input-field').props('dark filled behavior=menu')
+                
                 emotion_select = ui.select(
                     ['Calm', 'Stress', 'Anxious'], 
                     label='Emotion', value='Calm'
@@ -412,6 +431,8 @@ def main_page():
 
                     res = calc.calculate_dose(g, c, activity_select.value, emotion_select.value, history, 
                                               duration_minutes=int(duration_input.value or 0),
+                                              intensity=intensity_select.value,
+                                              user_weight=current_settings.weight,
                                               manual_last_bolus_min=int(last_dose_input.value))
                     
                     result_area.clear()
@@ -434,6 +455,10 @@ def main_page():
                                     ui.icon('check_circle', color='green-400')
                                     ui.label('SAFE TAIL').classes('text-green-400 font-bold')
                             ui.label('Exercise Risk: LOW').classes('text-center text-green-300 text-xs q-mt-xs font-bold uppercase tracking-widest w-full')
+
+                        # Energy Expenditure
+                        if res.get('energy_expended', 0) > 0:
+                            ui.label(f"Est. Burn: ~{res['energy_expended']} Kcal ({res['mets']} METs)").classes('w-full text-center text-xs text-yellow-300 font-bold q-mt-sm')
 
                         # Carb Refuel Warning
                         if res.get('carb_refuel_msg'):
@@ -619,6 +644,7 @@ def main_page():
                     'target_glucose': current_s.target_glucose,
                     'correction_threshold': current_s.correction_threshold,
                     'correction_threshold': current_s.correction_threshold,
+                    'weight': current_s.weight, # Added weight
                     # 'duration': current_s.duration_of_action, removed
                     # Modifiers
                     'mod_gym': current_s.mod_gym,
@@ -639,6 +665,7 @@ def main_page():
                     ui.number('Snack', value=s_values['icr_snack'], on_change=lambda e: s_values.update({'icr_snack': e.value})).classes('input-field').props('dark filled')
 
                 ui.label('Personal Factors').classes('text-subtitle2 q-mt-lg text-cyan-100')
+                ui.number('Weight (kg)', value=s_values.get('weight', 70), on_change=lambda e: s_values.update({'weight': e.value})).classes('w-full input-field').props('dark filled')
                 ui.number('ISF (1u drops X mg/dL)', value=s_values['isf'], on_change=lambda e: s_values.update({'isf': e.value})).classes('w-full input-field').props('dark filled')
                 ui.number('Target Glucose (mg/dL)', value=s_values['target_glucose'], on_change=lambda e: s_values.update({'target_glucose': e.value})).classes('w-full input-field').props('dark filled')
                 ui.number('Correction Threshold (mg/dL)', value=s_values['correction_threshold'], on_change=lambda e: s_values.update({'correction_threshold': e.value})).classes('w-full input-field').props('dark filled')
