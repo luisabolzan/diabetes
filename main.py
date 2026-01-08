@@ -47,15 +47,18 @@ def save_log(log_data):
     session.close()
     ui.notify('Log Saved to History', type='positive')
 
-def get_foods(query):
+def get_all_food_options():
     session = SessionLocal()
-    if query:
-        # Case insensitive search
-        foods = session.query(Food).filter(Food.name.ilike(f"%{query}%")).limit(50).all()
-    else:
-        foods = session.query(Food).limit(20).all()
+    foods = session.query(Food).all()
+    # Create options for ui.select: list of dicts {'label': '...', 'value': ...}
+    # Create options for ui.select: dict {value: label}
+    # This prevents [object Object] display issues in NiceGUI
+    options = {}
+    for f in foods:
+        label = f"{f.name} ({f.measure}) - {f.carbs}g CHO"
+        options[f.id] = label
     session.close()
-    return foods
+    return options
 
 def get_logs():
     session = SessionLocal()
@@ -252,21 +255,40 @@ def main_page():
                 with ui.dialog() as food_dialog, ui.card().classes('w-full max-w-4xl glass-panel p-6'):
                     ui.label('Meal Builder').classes('text-h5 text-cyan-300 font-bold q-mb-md')
                     
-                    search = ui.input(placeholder='Search food...', on_change=lambda e: update_search(e.value)).classes('w-full input-field q-mb-md').props('dark filled append=search')
+                    
+                    # Search replaced by ui.select below
                     
                     results_container = ui.column().classes('w-full h-64 overflow-y-auto q-mb-md p-2 border border-white/10 rounded')
                     
                     plate_container = ui.column().classes('w-full bg-black/20 p-4 rounded-lg q-mb-md')
                     plate_items = []
                     
-                    def add_to_plate(food):
-                        plate_items.append(food)
-                        update_plate()
-                    
+                    def add_to_plate(val):
+                        if not val: return
+                        
+                        # Fix: ui.select might return the whole dict {'label':..., 'value':...} or just value
+                        food_id = val
+                        if isinstance(val, dict):
+                            food_id = val.get('value')
+                        
+                        session = SessionLocal()
+                        food_item = session.query(Food).filter(Food.id == food_id).first()
+                        
+                        if food_item:
+                            # Create a simple object to hold the data
+                            from types import SimpleNamespace
+                            f = SimpleNamespace(name=food_item.name, measure=food_item.measure, carbs=food_item.carbs)
+                            plate_items.append(f)
+                            update_plate()
+                            
+                        session.close()
+                        # Reset selector
+                        food_select.value = None
+
                     def remove_from_plate(idx):
                         plate_items.pop(idx)
                         update_plate()
-                        
+
                     def update_plate():
                         plate_container.clear()
                         total_carbs = sum(f.carbs for f in plate_items)
@@ -279,20 +301,21 @@ def main_page():
                                         with ui.row().classes('items-center gap-2'):
                                             ui.label(f"{f.carbs}g").classes('text-sm font-bold text-white')
                                             ui.button(icon='delete', on_click=lambda idx=i: remove_from_plate(idx)).props('flat dense round text-color=red-400 size=sm')
+
+                    # Load options once
+                    options = get_all_food_options()
                     
-                    def update_search(query):
-                        results_container.clear()
-                        foods = get_foods(query)
-                        with results_container:
-                            for f in foods:
-                                with ui.row().classes('w-full items-center justify-between q-py-sm hover:bg-white/5 cursor-pointer rounded px-2'):
-                                    with ui.column().classes('gap-0'):
-                                        ui.label(f.name).classes('text-white font-medium')
-                                        ui.label(f.measure).classes('text-xs text-grey-400')
-                                    with ui.row().classes('items-center gap-2'):
-                                        ui.label(f"{f.carbs}g").classes('text-cyan-300 font-bold')
-                                        ui.button('Add', on_click=lambda food=f: add_to_plate(food)).props('flat dense size=sm color=cyan-400')
-                    
+                    with ui.row().classes('w-full items-center gap-2'):
+                        food_select = ui.select(
+                            options=options, 
+                            with_input=True, 
+                            label='Search food (Type to filter)',
+                            on_change=lambda e: add_to_plate(e.value) if e.value else None
+                        ).classes('w-full input-field').props('dark filled use-input behavior=menu')
+                        # Note: use-input enables text filtering in Quasar/NiceGUI
+
+                    # Legacy search UI removed
+
                     def confirm_meal():
                         total = sum(f.carbs for f in plate_items)
                         carbs_input.value = total
@@ -304,7 +327,7 @@ def main_page():
                         ui.button('Use Total Carbs', on_click=confirm_meal).classes('bg-gradient-to-r from-cyan-500 to-blue-500 text-white')
                     
                     # Initial load
-                    update_search('')
+                    # Initial load
                     update_plate()
 
                 ui.button('Open Meal Builder', icon='restaurant_menu', on_click=food_dialog.open).classes('w-full q-mt-sm bg-purple-900/50 text-purple-200 border border-purple-500/30 hover:bg-purple-800/50').props('flat')
