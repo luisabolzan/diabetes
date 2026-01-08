@@ -25,6 +25,16 @@ def test_threshold():
     res2 = calc.calculate_dose(130, 0, "None", "Calm", [])
     print(f"Test 2 (130 mg/dL): Correction Expected 0.8. Got: {res2['correction_dose']}")
 
+    # Case 3: Glucose 120 (Exact Threshold) -> Should correct to target 90
+    # Correction = (120 - 90) / 50 = 30 / 50 = 0.6
+    res3 = calc.calculate_dose(120, 0, "None", "Calm", [])
+    print(f"Test 3 (120 mg/dL): Correction Expected 0.6. Got: {res3['correction_dose']}")
+    
+    if abs(res3['correction_dose'] - 0.6) < 0.01:
+        print("PASS: Boundary condition handled correctly.")
+    else:
+        print("FAIL: Boundary condition failed.")
+
     session.close()
 
 if __name__ == "__main__":

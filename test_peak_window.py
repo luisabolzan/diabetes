@@ -8,7 +8,7 @@ def test_peak_window():
     settings = Settings(
         icr_breakfast=10.0, icr_lunch=10.0, icr_dinner=10.0, icr_snack=10.0,
         isf=50.0, target_glucose=100, correction_threshold=120,
-        mod_run=-0.30, mod_stress=0.0, mod_anxious=0.0, mod_gym=0.0, mod_swim=0.0, mod_yoga=0.0
+        mod_run=-0.30, mod_stress=0.0, mod_anxious=0.0, mod_gym=0.0, mod_swim=0.0, mod_beach_tennis=-0.20
     )
     
     calc = InsulinCalculator(settings)

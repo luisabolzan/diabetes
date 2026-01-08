@@ -43,7 +43,7 @@ class InsulinCalculator:
         target = self.settings.target_glucose
         threshold = self.settings.correction_threshold
         
-        if current_glucose > threshold:
+        if current_glucose >= threshold:
             correction_insulin = (current_glucose - target) / self.settings.isf
         else:
             correction_insulin = 0.0
@@ -58,7 +58,7 @@ class InsulinCalculator:
             "Gym/Weights": self.settings.mod_gym,
             "Running": self.settings.mod_run,
             "Swimming": self.settings.mod_swim,
-            "Yoga": self.settings.mod_yoga,
+            "Beach Tennis": self.settings.mod_beach_tennis,
             "None": 0.0
         }
         

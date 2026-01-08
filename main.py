@@ -32,7 +32,8 @@ def save_settings(s_input):
     settings.mod_gym = float(s_input.get('mod_gym', 0.10))
     settings.mod_run = float(s_input.get('mod_run', -0.30))
     settings.mod_swim = float(s_input.get('mod_swim', -0.30))
-    settings.mod_yoga = float(s_input.get('mod_yoga', -0.10))
+    settings.mod_swim = float(s_input.get('mod_swim', -0.30))
+    settings.mod_beach_tennis = float(s_input.get('mod_beach_tennis', -0.20))
     settings.mod_stress = float(s_input.get('mod_stress', 0.20))
     settings.mod_anxious = float(s_input.get('mod_anxious', 0.10))
     
@@ -87,7 +88,9 @@ def run_heuristic_adjustment(session, log, outcome):
         "Gym/Weights": "mod_gym",
         "Running": "mod_run",
         "Swimming": "mod_swim",
-        "Yoga": "mod_yoga",
+        "Running": "mod_run",
+        "Swimming": "mod_swim",
+        "Beach Tennis": "mod_beach_tennis",
         "Stress": "mod_stress",
         "Anxious": "mod_anxious"
     }
@@ -373,7 +376,7 @@ def main_page():
                 
                 ui.label('Context').classes('text-subtitle1 q-mt-md text-cyan-200 opacity-80')
                 activity_select = ui.select(
-                    ['None', 'Gym/Weights', 'Running', 'Swimming', 'Yoga'], 
+                    ['None', 'Gym/Weights', 'Running', 'Swimming', 'Beach Tennis'], 
                     label='Activity', value='None'
                 ).classes('w-full q-mt-sm input-field').props('dark filled behavior=menu')
                 
@@ -522,7 +525,7 @@ def main_page():
                 def get_card_class(param_name):
                     base = "p-4 glass-panel items-center justify-center column transition-all duration-500"
                     if last_adj and last_adj.parameter == param_name:
-                        return base + " border-2 border-yellow-400 bg-yellow-400/10 scale-105 shadow-[0_0_15px_rgba(250,204,21,0.5)]" 
+                        return base + " border-2 border-yellow-400 bg-yellow-400/10 shadow-[0_0_15px_rgba(250,204,21,0.5)]" 
                     return base + " border border-white/5 opacity-80 hover:opacity-100 hover:scale-105"
 
                 with ui.grid(columns=4).classes('w-full gap-4'):
@@ -530,8 +533,9 @@ def main_page():
                     for name, code, val in [
                         ('Gym', 'mod_gym', s.mod_gym), 
                         ('Run', 'mod_run', s.mod_run),
+
                         ('Swim', 'mod_swim', s.mod_swim), 
-                        ('Yoga', 'mod_yoga', s.mod_yoga)
+                        ('B.Tennis', 'mod_beach_tennis', s.mod_beach_tennis)
                     ]:
                         mod_name = code # e.g. mod_gym
                         # Our adjustment logic uses mapped names "Gym/Weights", "Running" etc.
@@ -548,7 +552,9 @@ def main_page():
                         if code == 'mod_gym': highlight_key = "Gym/Weights"
                         if code == 'mod_run': highlight_key = "Running"
                         if code == 'mod_swim': highlight_key = "Swimming"
-                        if code == 'mod_yoga': highlight_key = "Yoga"
+                        if code == 'mod_run': highlight_key = "Running"
+                        if code == 'mod_swim': highlight_key = "Swimming"
+                        if code == 'mod_beach_tennis': highlight_key = "Beach Tennis"
                         
                         is_highlighted = (last_adj and last_adj.parameter == highlight_key)
                         
@@ -602,7 +608,9 @@ def main_page():
                     'mod_gym': current_s.mod_gym,
                     'mod_run': current_s.mod_run,
                     'mod_swim': current_s.mod_swim,
-                    'mod_yoga': current_s.mod_yoga,
+                    'mod_run': current_s.mod_run,
+                    'mod_swim': current_s.mod_swim,
+                    'mod_beach_tennis': current_s.mod_beach_tennis,
                     'mod_stress': current_s.mod_stress,
                     'mod_anxious': current_s.mod_anxious
                 }
@@ -625,7 +633,7 @@ def main_page():
                      ui.number('Gym/Weights', value=s_values['mod_gym'], format='%.2f', on_change=lambda e: s_values.update({'mod_gym': e.value})).classes('input-field').props('dark filled')
                      ui.number('Running', value=s_values['mod_run'], format='%.2f', on_change=lambda e: s_values.update({'mod_run': e.value})).classes('input-field').props('dark filled')
                      ui.number('Swimming', value=s_values['mod_swim'], format='%.2f', on_change=lambda e: s_values.update({'mod_swim': e.value})).classes('input-field').props('dark filled')
-                     ui.number('Yoga', value=s_values['mod_yoga'], format='%.2f', on_change=lambda e: s_values.update({'mod_yoga': e.value})).classes('input-field').props('dark filled')
+                     ui.number('Beach Tennis', value=s_values['mod_beach_tennis'], format='%.2f', on_change=lambda e: s_values.update({'mod_beach_tennis': e.value})).classes('input-field').props('dark filled')
                      
                      ui.separator().classes('col-span-2 bg-white/10 q-my-sm')
                      

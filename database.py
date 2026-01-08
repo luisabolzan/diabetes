@@ -22,7 +22,7 @@ class Settings(Base):
     mod_gym = Column(Float, default=0.10)
     mod_run = Column(Float, default=-0.30)
     mod_swim = Column(Float, default=-0.30)
-    mod_yoga = Column(Float, default=-0.10)
+    mod_beach_tennis = Column(Float, default=-0.20)
     
     # Dynamic Modifiers (Emotion)
     mod_stress = Column(Float, default=0.20)
