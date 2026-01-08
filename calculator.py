@@ -23,25 +23,8 @@ class InsulinCalculator:
         else:
             return self.settings.icr_snack # Night/Late snack
 
-    def calculate_iob(self, history: List[Log], current_time: datetime) -> float:
-        """
-        Calculates Insulin On Board (IOB) using a linear decay model.
-        """
-        iob = 0.0
-        duration_minutes = self.settings.duration_of_action * 60
-        
-        for log in history:
-            if not log.actual_dose:
-                continue
-                
-            elapsed_minutes = (current_time - log.timestamp).total_seconds() / 60
-            
-            if 0 <= elapsed_minutes < duration_minutes:
-                # Linear decay: Percentage remaining = (Duration - Elapsed) / Duration
-                remaining_percent = (duration_minutes - elapsed_minutes) / duration_minutes
-                iob += log.actual_dose * remaining_percent
-                
-        return max(0.0, iob)
+    # calculate_iob removed as requested
+
 
     def calculate_dose(self, 
                        current_glucose: int, 
@@ -138,9 +121,10 @@ class InsulinCalculator:
             
         adjusted_insulin = gross_insulin * (1 + final_modifier)
         
-        # 3. IOB Subtraction
-        iob = self.calculate_iob(history, current_time)
-        final_dose = adjusted_insulin - iob
+        
+        # 3. IOB Subtraction REMOVED
+        # User requested to abandon standard IOB curve.
+        final_dose = adjusted_insulin
         
         # Safety floor
         if final_dose < 0:
@@ -155,7 +139,8 @@ class InsulinCalculator:
             "carb_dose": carb_insulin,
             "correction_dose": correction_insulin,
             "gross_dose": gross_insulin,
-            "iob": iob,
+            "gross_dose": gross_insulin,
+            # "iob": iob, # Removed
             "activity_modifier": act_mod,
             "emotion_modifier": emo_mod,
             "final_modifier_used": final_modifier,

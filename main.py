@@ -25,7 +25,8 @@ def save_settings(s_input):
     settings.isf = float(s_input['isf'])
     settings.target_glucose = int(s_input['target_glucose'])
     settings.correction_threshold = int(s_input['correction_threshold'])
-    settings.duration_of_action = float(s_input['duration'])
+    settings.correction_threshold = int(s_input['correction_threshold'])
+    # Duration removed
     
     # Save Dynamic Modifiers
     settings.mod_gym = float(s_input.get('mod_gym', 0.10))
@@ -149,6 +150,16 @@ def export_logs():
             outcome
         ])
     
+    # Save to local disk
+    local_filename = 'diabetes_logs.csv'
+    with open(local_filename, 'w', newline='') as f:
+        f.write(output.getvalue())
+        
+    import os
+    abs_path = os.path.abspath(local_filename)
+    ui.notify(f'Exported to: {abs_path}', type='positive', close_button=True, timeout=None)
+    
+    # Also trigger browser download
     ui.download(output.getvalue().encode(), 'diabetes_logs.csv')
 
 def save_feedback(log_id, outcome):
@@ -426,7 +437,6 @@ def main_page():
                                 - Emotion: {res['emotion_modifier']:.0%}
                                 - *Final Used*: {res['final_modifier_used']:.0%} ({res['notes']})
                             - **Adjusted**: {res['adjusted_dose']:.2f} u
-                            - **IOB Subtracted**: -{res['iob']:.2f} u
                             """).classes('text-grey-300')
                         
                         # Prepare log data
@@ -586,7 +596,8 @@ def main_page():
                     'isf': current_s.isf,
                     'target_glucose': current_s.target_glucose,
                     'correction_threshold': current_s.correction_threshold,
-                    'duration': current_s.duration_of_action,
+                    'correction_threshold': current_s.correction_threshold,
+                    # 'duration': current_s.duration_of_action, removed
                     # Modifiers
                     'mod_gym': current_s.mod_gym,
                     'mod_run': current_s.mod_run,
@@ -607,12 +618,19 @@ def main_page():
                 ui.number('ISF (1u drops X mg/dL)', value=s_values['isf'], on_change=lambda e: s_values.update({'isf': e.value})).classes('w-full input-field').props('dark filled')
                 ui.number('Target Glucose (mg/dL)', value=s_values['target_glucose'], on_change=lambda e: s_values.update({'target_glucose': e.value})).classes('w-full input-field').props('dark filled')
                 ui.number('Correction Threshold (mg/dL)', value=s_values['correction_threshold'], on_change=lambda e: s_values.update({'correction_threshold': e.value})).classes('w-full input-field').props('dark filled')
-                ui.number('Duration of Action (Hours)', value=s_values['duration'], on_change=lambda e: s_values.update({'duration': e.value})).classes('w-full input-field').props('dark filled')
+
                 
                 ui.label('Adaptive Modifiers (Current)').classes('text-subtitle2 q-mt-lg text-purple-200')
                 with ui.grid(columns=2).classes('gap-4'):
+                     ui.number('Gym/Weights', value=s_values['mod_gym'], format='%.2f', on_change=lambda e: s_values.update({'mod_gym': e.value})).classes('input-field').props('dark filled')
                      ui.number('Running', value=s_values['mod_run'], format='%.2f', on_change=lambda e: s_values.update({'mod_run': e.value})).classes('input-field').props('dark filled')
+                     ui.number('Swimming', value=s_values['mod_swim'], format='%.2f', on_change=lambda e: s_values.update({'mod_swim': e.value})).classes('input-field').props('dark filled')
+                     ui.number('Yoga', value=s_values['mod_yoga'], format='%.2f', on_change=lambda e: s_values.update({'mod_yoga': e.value})).classes('input-field').props('dark filled')
+                     
+                     ui.separator().classes('col-span-2 bg-white/10 q-my-sm')
+                     
                      ui.number('Stress', value=s_values['mod_stress'], format='%.2f', on_change=lambda e: s_values.update({'mod_stress': e.value})).classes('input-field').props('dark filled')
+                     ui.number('Anxious', value=s_values['mod_anxious'], format='%.2f', on_change=lambda e: s_values.update({'mod_anxious': e.value})).classes('input-field').props('dark filled')
                 
                 ui.button('Save Settings', on_click=lambda: save_settings(s_values)).classes('w-full q-mt-xl action-btn py-2')
 

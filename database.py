@@ -16,7 +16,7 @@ class Settings(Base):
     isf = Column(Float, default=50.0) # Insulin Sensitivity Factor
     target_glucose = Column(Integer, default=90) # Target Blood Glucose
     correction_threshold = Column(Integer, default=120) # Threshold for correction
-    duration_of_action = Column(Float, default=4.0) # Hours
+
     
     # Dynamic Modifiers (Activity)
     mod_gym = Column(Float, default=0.10)

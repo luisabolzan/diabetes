@@ -7,7 +7,7 @@ def test_peak_window():
     
     settings = Settings(
         icr_breakfast=10.0, icr_lunch=10.0, icr_dinner=10.0, icr_snack=10.0,
-        isf=50.0, target_glucose=100, correction_threshold=120, duration_of_action=4.0,
+        isf=50.0, target_glucose=100, correction_threshold=120,
         mod_run=-0.30, mod_stress=0.0, mod_anxious=0.0, mod_gym=0.0, mod_swim=0.0, mod_yoga=0.0
     )
     
@@ -26,9 +26,9 @@ def test_peak_window():
     print(f"Modifier Used: {res_peak['final_modifier_used']:.2f}")
     
     if res_peak.get('risk_state') == "HIGH" and res_peak['final_modifier_used'] == -0.50:
-        print("PASS: High Risk detected, -50% applied.")
+        print("✅ PASS: High Risk detected, -50% applied.")
     else:
-        print("FAIL: Window logic incorrect.")
+        print("❌ FAIL: Window logic incorrect.")
 
     # CASE 2: OUT OF WINDOW (150 mins ago) + ACTIVE
     print("\n--- CASE 2: 150 mins ago (TAIL) + Running ---")
@@ -42,9 +42,9 @@ def test_peak_window():
     
     # Standard Running mod is -0.30
     if res_tail.get('risk_state') == "LOW" and abs(res_tail['final_modifier_used'] - (-0.30)) < 0.01:
-        print("PASS: Safe Tail detected, standard modifier applied.")
+        print("✅ PASS: Safe Tail detected, standard modifier applied.")
     else:
-        print(f"FAIL: Tail logic incorrect (Mod: {res_tail['final_modifier_used']}).")
+        print(f"❌ FAIL: Tail logic incorrect (Mod: {res_tail['final_modifier_used']}).")
 
 if __name__ == "__main__":
     test_peak_window()
