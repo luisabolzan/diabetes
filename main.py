@@ -57,7 +57,7 @@ def get_all_food_options():
     # This prevents [object Object] display issues in NiceGUI
     options = {}
     for f in foods:
-        label = f"{f.name} ({f.measure}) - {f.carbs}g CHO"
+        label = f"{f.name} ({f.measure}) - {f.carbs}g CHO | {f.kcal} Kcal"
         options[f.id] = label
     session.close()
     return options
@@ -283,9 +283,10 @@ def main_page():
 
                 ui.label('Bolus Calculator').classes('text-h5 q-mb-lg text-cyan-300 font-bold text-center')
                 
-                with ui.grid(columns=2).classes('w-full gap-6'):
+                with ui.grid(columns=3).classes('w-full gap-4'):
                     glucose_input = ui.number(label='Current Glucose (mg/dL)', value=120, format='%.0f').classes('w-full input-field').props('dark filled')
                     carbs_input = ui.number(label='Carbs (g)', value=0, format='%.0f').classes('w-full input-field').props('dark filled')
+                    kcal_input = ui.number(label='Calories (Kcal)', value=0, format='%.0f').classes('w-full input-field').props('dark filled')
                 
                 # Manual Override Input
                 last_dose_input = ui.number(label='Time Since Last Dose (min)', value=180, format='%.0f', on_change=lambda: update_live_status()).classes('w-full input-field q-mt-md').props('dark filled')
@@ -318,7 +319,7 @@ def main_page():
                         if food_item:
                             # Create a simple object to hold the data
                             from types import SimpleNamespace
-                            f = SimpleNamespace(name=food_item.name, measure=food_item.measure, carbs=food_item.carbs)
+                            f = SimpleNamespace(name=food_item.name, measure=food_item.measure, carbs=food_item.carbs, kcal=food_item.kcal)
                             plate_items.append(f)
                             update_plate()
                             
@@ -333,14 +334,15 @@ def main_page():
                     def update_plate():
                         plate_container.clear()
                         total_carbs = sum(f.carbs for f in plate_items)
+                        total_kcal = sum(f.kcal for f in plate_items)
                         with plate_container:
-                            ui.label(f'Virtual Plate (Total: {total_carbs:.1f}g CHO)').classes('text-lg text-green-400 font-bold q-mb-sm')
+                            ui.label(f'Virtual Plate (Total: {total_carbs:.1f}g CHO | {total_kcal} Kcal)').classes('text-lg text-green-400 font-bold q-mb-sm')
                             with ui.scroll_area().classes('h-32 w-full'):
                                 for i, f in enumerate(plate_items):
                                     with ui.row().classes('w-full items-center justify-between q-py-xs border-b border-white/5'):
                                         ui.label(f"{f.name} ({f.measure})").classes('text-sm text-grey-300')
                                         with ui.row().classes('items-center gap-2'):
-                                            ui.label(f"{f.carbs}g").classes('text-sm font-bold text-white')
+                                            ui.label(f"{f.carbs}g | {f.kcal} Kcal").classes('text-sm font-bold text-white')
                                             ui.button(icon='delete', on_click=lambda idx=i: remove_from_plate(idx)).props('flat dense round text-color=red-400 size=sm')
 
                     # Load options once
@@ -358,14 +360,16 @@ def main_page():
                     # Legacy search UI removed
 
                     def confirm_meal():
-                        total = sum(f.carbs for f in plate_items)
-                        carbs_input.value = total
+                        total_c = sum(f.carbs for f in plate_items)
+                        total_k = sum(f.kcal for f in plate_items)
+                        carbs_input.value = total_c
+                        kcal_input.value = total_k
                         food_dialog.close()
-                        ui.notify(f'Filled {total}g from Meal Builder!', type='positive')
+                        ui.notify(f'Filled {total_c}g CHO & {total_k} Kcal!', type='positive')
                         
                     with ui.row().classes('w-full justify-end gap-4'):
                         ui.button('Cancel', on_click=food_dialog.close).props('flat color=grey')
-                        ui.button('Use Total Carbs', on_click=confirm_meal).classes('bg-gradient-to-r from-cyan-500 to-blue-500 text-white')
+                        ui.button('Use Meal', on_click=confirm_meal).classes('bg-gradient-to-r from-cyan-500 to-blue-500 text-white')
                     
                     # Initial load
                     # Initial load

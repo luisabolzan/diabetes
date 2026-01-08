@@ -45,19 +45,27 @@ def ingest():
             
         try:
             # Parse CHO
-            # Sometimes it might fail if emptiness or weird chars
             if not raw_cho:
                 continue
             
-            # Remove any trailing invalid chars if needed, though float() handles some
             cho = float(raw_cho)
+            
+            # Parse Kcal (if available)
+            kcal = 0
+            if len(parts) >= 4:
+                try:
+                    raw_kcal = parts[3].strip()
+                    if raw_kcal:
+                        kcal = int(float(raw_kcal))
+                except ValueError:
+                    kcal = 0
             
             # Name and Measure
             name = raw_name
             measure = raw_measure
             
             # Create object
-            f = Food(name=name, measure=measure, carbs=cho)
+            f = Food(name=name, measure=measure, carbs=cho, kcal=kcal)
             session.add(f)
             count += 1
             

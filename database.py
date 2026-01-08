@@ -75,6 +75,7 @@ class Food(Base):
     name = Column(String)
     measure = Column(String) # e.g. "1 colher de sopa"
     carbs = Column(Float) # g of CHO
+    kcal = Column(Integer) # Calories
 
 # Database Setup
 DATABASE_URL = "sqlite:///./diabetes.db"

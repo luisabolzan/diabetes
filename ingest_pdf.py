@@ -60,19 +60,24 @@ def ingest():
                 p_2nd = parts[-2].replace(',', '.') if len(parts) > 1 else "x"
                 p_3rd = parts[-3].replace(',', '.') if len(parts) > 2 else "x"
                 
+                kcal = 0
                 cho = 0.0
                 
                 # Context: Weight | CHO | Kcal (3 numbers at end)
                 if len(parts) >= 3 and is_num(parts[-1]) and is_num(parts[-2]) and is_num(parts[-3]):
+                    kcal = int(float(p_last))
                     cho = float(p_2nd)
                     name_end = -3
                 # Context: CHO | Kcal (2 numbers at end)
+                # Assuming the format is consistently CHO then Kcal if 2 numbers exist
                 elif len(parts) >= 2 and is_num(parts[-1]) and is_num(parts[-2]):
+                     kcal = int(float(p_last))
                      cho = float(p_2nd)
                      name_end = -2
                 # Context: Just CHO (1 number)
                 elif len(parts) >= 1 and is_num(parts[-1]):
                     cho = float(p_last)
+                    kcal = 0 # No kcal data
                     name_end = -1
                 else:
                     continue
@@ -122,7 +127,7 @@ def ingest():
                     name = " ".join(parts[:split_idx])
                     measure = " ".join(parts[split_idx:-1])
                 
-                f = Food(name=name, measure=measure, carbs=cho)
+                f = Food(name=name, measure=measure, carbs=cho, kcal=kcal)
                 session.add(f)
                 count += 1
                 
