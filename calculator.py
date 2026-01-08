@@ -32,6 +32,7 @@ class InsulinCalculator:
                        activity: str, 
                        emotion: str, 
                        history: List[Log],
+                       duration_minutes: int = 0,
                        manual_last_bolus_min: Optional[int] = None) -> dict:
         
         current_time = datetime.now()
@@ -69,8 +70,34 @@ class InsulinCalculator:
             "Calm": 0.0
         }
         
-        act_mod = activity_factors.get(activity, 0.0)
+        base_act_mod = activity_factors.get(activity, 0.0)
         emo_mod = emotion_factors.get(emotion, 0.0)
+        
+        # --- Duration Scaling Logic ---
+        act_mod = base_act_mod
+        carb_refuel_msg = None
+        scaling_note = ""
+
+        if activity != "None" and duration_minutes > 0:
+             if duration_minutes < 20:
+                 act_mod = base_act_mod * 0.5
+                 scaling_note = f" (Short {duration_minutes}m: 50% impact)"
+             elif 20 <= duration_minutes < 50:
+                 act_mod = base_act_mod 
+                 scaling_note = f" (Standard {duration_minutes}m)"
+             elif 50 <= duration_minutes < 90:
+                 act_mod = base_act_mod * 1.5
+                 scaling_note = f" (Long {duration_minutes}m: 1.5x impact)"
+             else: # >= 90
+                 potential = base_act_mod * 1.5
+                 # Cap at -0.50 (Max Safe Reduction)
+                 if potential < -0.50:
+                     act_mod = -0.50
+                 else:
+                     act_mod = potential
+                     
+                 scaling_note = f" (Endurance {duration_minutes}m: Capped at -50%)"
+                 carb_refuel_msg = "Recommendation: Carb Refuel (15-30g) every hour."
         
         # Priority Rule: If Exercise (usually lowers) and Stress (raises) are both present
         # We assume "Exercise" is the one that lowers glucose (negative factor)
@@ -102,10 +129,13 @@ class InsulinCalculator:
             # Standard Logic
             if act_mod < 0 and emo_mod > 0:
                 final_modifier = act_mod
-                notes = "Priority Rule Applied: Ignored emotion stress spike due to exercise."
+                notes = f"Priority Rule: Ignored emotion due to exercise.{scaling_note}"
             else:
                 final_modifier = act_mod + emo_mod
-                notes = "Standard modifiers applied."
+                if scaling_note:
+                    notes = f"Standard modifiers.{scaling_note}"
+                else:
+                    notes = "Standard modifiers applied."
                 
             if is_peak_window:
                  # In window but no activity, still alert? User said "AND Activity == True" for the reduction.
@@ -148,5 +178,6 @@ class InsulinCalculator:
             "final_dose_raw": final_dose,
             "recommended_dose": recommended_dose,
             "risk_state": risk_state,
-            "notes": notes
+            "notes": notes,
+            "carb_refuel_msg": carb_refuel_msg
         }

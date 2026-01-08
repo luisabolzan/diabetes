@@ -379,10 +379,13 @@ def main_page():
                 # ---------------------
                 
                 ui.label('Context').classes('text-subtitle1 q-mt-md text-cyan-200 opacity-80')
-                activity_select = ui.select(
-                    ['None', 'Gym/Weights', 'Running', 'Swimming', 'Beach Tennis'], 
-                    label='Activity', value='None'
-                ).classes('w-full q-mt-sm input-field').props('dark filled behavior=menu')
+                with ui.grid(columns=2).classes('gap-4'):
+                    activity_select = ui.select(
+                        ['None', 'Gym/Weights', 'Running', 'Swimming', 'Beach Tennis'], 
+                        label='Activity', value='None'
+                    ).classes('w-full mt-0 input-field').props('dark filled behavior=menu')
+
+                    duration_input = ui.number(label='Duration (min)', value=30, format='%.0f').classes('w-full input-field').props('dark filled')
                 
                 emotion_select = ui.select(
                     ['Calm', 'Stress', 'Anxious'], 
@@ -407,7 +410,9 @@ def main_page():
                         ui.notify('Invalid Input', type='negative', color='red-5')
                         return
 
-                    res = calc.calculate_dose(g, c, activity_select.value, emotion_select.value, history, manual_last_bolus_min=int(last_dose_input.value))
+                    res = calc.calculate_dose(g, c, activity_select.value, emotion_select.value, history, 
+                                              duration_minutes=int(duration_input.value or 0),
+                                              manual_last_bolus_min=int(last_dose_input.value))
                     
                     result_area.clear()
                     result_area.classes(remove='hidden')
@@ -429,6 +434,13 @@ def main_page():
                                     ui.icon('check_circle', color='green-400')
                                     ui.label('SAFE TAIL').classes('text-green-400 font-bold')
                             ui.label('Exercise Risk: LOW').classes('text-center text-green-300 text-xs q-mt-xs font-bold uppercase tracking-widest w-full')
+
+                        # Carb Refuel Warning
+                        if res.get('carb_refuel_msg'):
+                             with ui.row().classes('w-full justify-center q-mt-md'):
+                                with ui.row().classes('bg-orange-500/20 border border-orange-500 rounded-lg px-4 py-2 items-center gap-2'):
+                                    ui.icon('restaurant', color='orange-400')
+                                    ui.label(res['carb_refuel_msg']).classes('text-orange-300 font-bold text-sm')
 
                         with ui.row().classes('w-full justify-center q-my-md'):
                              ui.label(f"{res['recommended_dose']} units").classes('text-6xl text-cyan-400 font-black drop-shadow-lg')
