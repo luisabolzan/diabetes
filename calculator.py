@@ -25,39 +25,12 @@ class InsulinCalculator:
 
     # calculate_iob removed as requested
 
-
-    def calculate_dose(self, 
-                       current_glucose: int, 
-                       carbs: int, 
-                       activity: str, 
-                       emotion: str, 
-                       history: List[Log],
-                       duration_minutes: int = 0,
-                       intensity: str = "Moderate", # Slow, Moderate, Fast
-                       user_weight: float = 70.0,
-                       manual_last_bolus_min: Optional[int] = None) -> dict:
-        
-        current_time = datetime.now()
-        
-        # 1. Base Components
-        icr = self.get_icr(current_time)
-        carb_insulin = carbs / icr
-        
-        target = self.settings.target_glucose
-        threshold = self.settings.correction_threshold
-        
-        if current_glucose >= threshold:
-            correction_insulin = (current_glucose - target) / self.settings.isf
-        else:
-            correction_insulin = 0.0
-        
-        gross_insulin = carb_insulin + correction_insulin
-        
-        # 2. Contextual Modifiers
-        modifier_percent = 0.0
-        
-        # Activity Factors (Dynamic)
-        # These are BASE modifiers for Moderate intensity
+    def calculate_activity_modifier(self, activity: str, duration_minutes: int, intensity: str, user_weight: float) -> dict:
+        """
+        Calculates the activity modifier percentage, METs, and energy expenditure.
+        Returns a dict with 'modifier' (float), 'mets' (float), 'kcal' (int), 'notes' (str), 'carb_refuel' (str|None).
+        """
+        # Base Modifiers from Settings
         activity_factors = {
             "Gym/Weights": self.settings.mod_gym,
             "Running": self.settings.mod_run,
@@ -66,19 +39,9 @@ class InsulinCalculator:
             "None": 0.0
         }
         
-        # Emotion Factors
-        emotion_factors = {
-            "Stress": self.settings.mod_stress,
-            "Anxious": self.settings.mod_anxious,
-            "Calm": 0.0
-        }
-        
         base_act_mod = activity_factors.get(activity, 0.0)
-        emo_mod = emotion_factors.get(emotion, 0.0)
         
-        # --- METs & Intensity Logic ---
-        # Map Activity + Intensity -> METs
-        # Default METs (Moderate)
+        # --- METs Logic ---
         met_defaults = {
             "Gym/Weights": 5.0,
             "Running": 9.8, 
@@ -88,7 +51,6 @@ class InsulinCalculator:
         }
         
         # Intensity Multipliers for METs
-        # Standard: Slow 0.8x, Moderate 1.0x, Fast 1.25x
         met_mult = 1.0
         if intensity == "Slow": met_mult = 0.8
         elif intensity == "Fast": met_mult = 1.25
@@ -96,36 +58,32 @@ class InsulinCalculator:
         base_mets = met_defaults.get(activity, 1.0)
         final_mets = base_mets * met_mult
         
-        # Override for Beach Tennis (Specific Benchmarks)
+        # Override for Beach Tennis
         if activity == "Beach Tennis":
             if intensity == "Slow": final_mets = 6.0
-            elif intensity == "Moderate": final_mets = 8.0 # Doubles
-            elif intensity == "Fast": final_mets = 11.0 # Singles
+            elif intensity == "Moderate": final_mets = 8.0
+            elif intensity == "Fast": final_mets = 11.0
 
-        # Energy Expenditure = METs * Weight(kg) * Time(hours)
+        # Energy Expenditure
         hours = duration_minutes / 60.0
         energy_expended = final_mets * user_weight * hours
         
-        # --- Intensity Scaling for Insulin Reduction ---
-        # If High Intensity (> 12 METs), increase reduction (1.3x)
-        
+        # --- Intensity Scaling (Impact Factor) ---
         intensity_impact_factor = 1.0
         intensity_note = ""
         
         # Beach Tennis Specific Logic
         if activity == "Beach Tennis":
-            # Terrain Multiplier (Sand) - Increases base effort
+            # Terrain Multiplier
             base_act_mod *= 1.2
             
             if intensity == "Fast": # Singles
-                # Non-linear scaling for high anaerobic/aerobic mix
                 intensity_impact_factor = 1.4
                 intensity_note = " (Singles Match: High Intensity Reduction)"
             elif intensity == "Moderate":
                 intensity_note = " (Doubles Match: Sand Terrain)"
         else:
-             # Standard Activity Logic (Running, Swimming, Gym)
-             # Apply scaling based on Intensity Tier
+             # Standard Logic
              if intensity == "Slow":
                  intensity_impact_factor = 0.8
                  intensity_note = " (Low Intensity: Reduced Impact)"
@@ -133,7 +91,6 @@ class InsulinCalculator:
                  intensity_impact_factor = 1.25
                  intensity_note = " (High Intensity: Extra Reduction)"
              
-             # Bonus check for very high METs (e.g. Sprints)
              if final_mets >= 12.0:
                  intensity_impact_factor = max(intensity_impact_factor, 1.4)
                  intensity_note = " (Extreme Intensity: Max Reduction)"
@@ -166,8 +123,62 @@ class InsulinCalculator:
                  scaling_note = f" (Endurance: Capped)"
                  carb_refuel_msg = "Recommendation: Carb Refuel (15-30g) every hour."
         
-        # Combine notes
-        full_activity_note = f"{intensity_note}{scaling_note}"
+        full_note = f"{intensity_note}{scaling_note}"
+        
+        return {
+            "modifier": act_mod,
+            "mets": final_mets,
+            "kcal": int(energy_expended),
+            "notes": full_note,
+            "carb_refuel": carb_refuel_msg
+        }
+
+
+    def calculate_dose(self, 
+                       current_glucose: int, 
+                       carbs: int, 
+                       activity: str, 
+                       emotion: str, 
+                       history: List[Log],
+                       duration_minutes: int = 0,
+                       intensity: str = "Moderate", # Slow, Moderate, Fast
+                       user_weight: float = 70.0,
+                       manual_last_bolus_min: Optional[int] = None) -> dict:
+        
+        current_time = datetime.now()
+        
+        # 1. Base Components
+        icr = self.get_icr(current_time)
+        carb_insulin = carbs / icr
+        
+        target = self.settings.target_glucose
+        threshold = self.settings.correction_threshold
+        
+        if current_glucose >= threshold:
+            correction_insulin = (current_glucose - target) / self.settings.isf
+        else:
+            correction_insulin = 0.0
+        
+        gross_insulin = carb_insulin + correction_insulin
+        
+        # 2. Contextual Modifiers
+        
+        # Emotion Factors
+        emotion_factors = {
+            "Stress": self.settings.mod_stress,
+            "Anxious": self.settings.mod_anxious,
+            "Calm": 0.0
+        }
+        
+        emo_mod = emotion_factors.get(emotion, 0.0)
+        
+        # Calculate Activity Modifiers using helper
+        act_calc_results = self.calculate_activity_modifier(activity, duration_minutes, intensity, user_weight)
+        act_mod = act_calc_results["modifier"]
+        carb_refuel_msg = act_calc_results["carb_refuel"]
+        full_activity_note = act_calc_results["notes"]
+        energy_expended = act_calc_results["kcal"]
+        final_mets = act_calc_results["mets"]
         
         # --- Peak Window Logic (Hard Override) ---
         last_bolus_mins = 9999

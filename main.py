@@ -251,7 +251,8 @@ def main_page():
     # Tabs
     with ui.tabs().classes('w-full text-grey-400') as tabs:
         calc_tab = ui.tab('Calculator').classes('text-lg')
-        insights_tab = ui.tab('Insights').classes('text-lg')
+        insights_tab = ui.tab('Insights').classes('text-lg') 
+        # Note: moved Insights content to its own panel below
         history_tab = ui.tab('History').classes('text-lg')
         settings_tab = ui.tab('Settings').classes('text-lg')
 
@@ -502,46 +503,73 @@ def main_page():
         
         # --- INSIGHTS TAB ---
         with ui.tab_panel(insights_tab):
-            ui.label('Algorithm Insights').classes('text-h5 q-mb-lg text-cyan-300 font-bold')
-            
-            # Helper to refresh adjustmetns
-            def refresh_insights():
-                insights_container.clear()
-                adjs = get_adjustments()
+            with ui.card().classes('w-full max-w-4xl mx-auto p-6 glass-panel no-shadow h-full'):
+                ui.label('Activity Impact Analysis').classes('text-h5 text-cyan-300 font-bold q-mb-md')
+                ui.label('Visualize how duration and intensity affect insulin reduction.').classes('text-grey-400 q-mb-lg')
                 
-                if not adjs:
-                    with insights_container:
-                        ui.label('No adaptive adjustments yet.').classes('text-grey italic')
-                    return
+                with ui.row().classes('w-full items-center gap-4 q-mb-md'):
+                     viz_activity = ui.select(
+                        ['Running', 'Swimming', 'Beach Tennis', 'Gym/Weights'], 
+                        label='Select Activity', value='Running'
+                    ).classes('w-64 input-field').props('dark filled behavior=menu')
                 
-                with insights_container:
-                    for a in adjs:
-                        with ui.card().classes('w-full q-mb-md p-4 glass-panel no-shadow border-l-4 border-purple-500'):
-                            with ui.row().classes('items-center gap-3 q-mb-sm'):
-                                ui.icon('auto_fix_high', size='sm').classes('text-purple-400')
-                                ui.label(f"Adapted {a.parameter}").classes('text-lg font-bold text-white')
-                                ui.label(a.timestamp.strftime('%Y-%m-%d %H:%M')).classes('text-grey-500 text-sm ml-auto')
-                            
-                            with ui.row().classes('items-center justify-between bg-black/20 p-3 rounded-lg'):
-                                with ui.column().classes('items-center'):
-                                    ui.label('Before').classes('text-xs text-grey-400 uppercase')
-                                    ui.label(f"{a.old_value:.0%}").classes('text-red-300 font-bold')
-                                
-                                ui.icon('arrow_forward').classes('text-grey-600')
-                                
-                                with ui.column().classes('items-center'):
-                                    ui.label('After').classes('text-xs text-grey-400 uppercase')
-                                    ui.label(f"{a.new_value:.0%}").classes('text-green-300 font-bold')
-                            
-                            ui.label(f"Rationale: {a.rationale}").classes('text-sm text-grey-300 q-mt-sm italic')
-                            
-                            if a.log:
-                                with ui.expansion('Source Log Context').classes('text-sm text-grey-500'):
-                                    ui.label(f"Glucose: {a.log.glucose} | Activity: {a.log.activity}")
-
-            insights_container = ui.column().classes('w-full max-w-2xl mx-auto')
-            refresh_insights()
-            ui.button('Refresh', icon='refresh', on_click=refresh_insights).classes('q-mt-md').props('flat round text-color=purple-300')
+                chart_container = ui.element('div').classes('w-full h-96')
+                
+                def update_chart():
+                     chart_container.clear()
+                     act = viz_activity.value
+                     if not act: return
+                     
+                     durations = list(range(0, 130, 10)) # 0 to 120 min
+                     
+                     series_slow = []
+                     series_mod = []
+                     series_fast = []
+                     
+                     
+                     sim_weight = 70.0 
+                     
+                     # Instantiate calculator for visualization
+                     s = get_settings()
+                     calc = InsulinCalculator(s)
+                     
+                     for d in durations:
+                         # Calculate for each intensity
+                         r_slow = calc.calculate_activity_modifier(act, d, "Slow", sim_weight)
+                         r_mod = calc.calculate_activity_modifier(act, d, "Moderate", sim_weight)
+                         r_fast = calc.calculate_activity_modifier(act, d, "Fast", sim_weight)
+                         
+                         series_slow.append(round(r_slow['modifier'] * 100, 1))
+                         series_mod.append(round(r_mod['modifier'] * 100, 1))
+                         series_fast.append(round(r_fast['modifier'] * 100, 1))
+                         
+                     with chart_container:
+                         ui.echart({
+                            'tooltip': {'trigger': 'axis'},
+                            'legend': {'textStyle': {'color': '#ccc'}},
+                            'xAxis': {
+                                'type': 'category', 
+                                'data': durations, 
+                                'name': 'Min',
+                                'axisLine': {'lineStyle': {'color': '#ccc'}}
+                            },
+                            'yAxis': {
+                                'type': 'value', 
+                                'name': '%',
+                                'axisLabel': {'formatter': '{value} %'},
+                                'axisLine': {'lineStyle': {'color': '#ccc'}},
+                                'splitLine': {'lineStyle': {'color': '#333'}}
+                            },
+                            'series': [
+                                {'name': 'Slow', 'type': 'line', 'data': series_slow, 'smooth': True, 'itemStyle': {'color': '#4ade80'}},
+                                {'name': 'Moderate', 'type': 'line', 'data': series_mod, 'smooth': True, 'itemStyle': {'color': '#fbbf24'}},
+                                {'name': 'Fast/High', 'type': 'line', 'data': series_fast, 'smooth': True, 'itemStyle': {'color': '#f87171'}}
+                            ],
+                            'grid': {'containLabel': True, 'left': '5%', 'right': '5%'}
+                         }).classes('w-full h-full')
+                
+                viz_activity.on_value_change(update_chart)
+                update_chart()
             
             # --- DYNAMIC MATRIX SECTION (Real-Time Listener) ---
             ui.label('Dynamic Variable Matrix').classes('text-h5 q-mt-xl q-mb-md text-cyan-300 font-bold')
