@@ -83,12 +83,12 @@ class InsulinCalculator:
             "Gym/Weights": 5.0,
             "Running": 9.8, 
             "Swimming": 8.0,
-            "Beach Tennis": 7.3,
+            "Beach Tennis": 8.0, # Baseline Doubles
             "None": 1.0
         }
         
         # Intensity Multipliers for METs
-        # Slow 0.8x, Moderate 1.0x, Fast 1.25x
+        # Standard: Slow 0.8x, Moderate 1.0x, Fast 1.25x
         met_mult = 1.0
         if intensity == "Slow": met_mult = 0.8
         elif intensity == "Fast": met_mult = 1.25
@@ -96,20 +96,47 @@ class InsulinCalculator:
         base_mets = met_defaults.get(activity, 1.0)
         final_mets = base_mets * met_mult
         
+        # Override for Beach Tennis (Specific Benchmarks)
+        if activity == "Beach Tennis":
+            if intensity == "Slow": final_mets = 6.0
+            elif intensity == "Moderate": final_mets = 8.0 # Doubles
+            elif intensity == "Fast": final_mets = 11.0 # Singles
+
         # Energy Expenditure = METs * Weight(kg) * Time(hours)
         hours = duration_minutes / 60.0
         energy_expended = final_mets * user_weight * hours
         
         # --- Intensity Scaling for Insulin Reduction ---
         # If High Intensity (> 12 METs), increase reduction (1.3x)
-        # If Low Intensity (< 6 METs), maybe decrease? Keeping standard for now.
         
         intensity_impact_factor = 1.0
         intensity_note = ""
         
-        if final_mets >= 12.0:
-            intensity_impact_factor = 1.25 # Increase reduction by 25%
-            intensity_note = " (High Intensity: Extra Reduction)"
+        # Beach Tennis Specific Logic
+        if activity == "Beach Tennis":
+            # Terrain Multiplier (Sand) - Increases base effort
+            base_act_mod *= 1.2
+            
+            if intensity == "Fast": # Singles
+                # Non-linear scaling for high anaerobic/aerobic mix
+                intensity_impact_factor = 1.4
+                intensity_note = " (Singles Match: High Intensity Reduction)"
+            elif intensity == "Moderate":
+                intensity_note = " (Doubles Match: Sand Terrain)"
+        else:
+             # Standard Activity Logic (Running, Swimming, Gym)
+             # Apply scaling based on Intensity Tier
+             if intensity == "Slow":
+                 intensity_impact_factor = 0.8
+                 intensity_note = " (Low Intensity: Reduced Impact)"
+             elif intensity == "Fast":
+                 intensity_impact_factor = 1.25
+                 intensity_note = " (High Intensity: Extra Reduction)"
+             
+             # Bonus check for very high METs (e.g. Sprints)
+             if final_mets >= 12.0:
+                 intensity_impact_factor = max(intensity_impact_factor, 1.4)
+                 intensity_note = " (Extreme Intensity: Max Reduction)"
         
         scaled_base_act_mod = base_act_mod * intensity_impact_factor
         
