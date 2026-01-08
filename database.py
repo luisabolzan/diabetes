@@ -68,6 +68,14 @@ class Adjustment(Base):
     
     log = relationship("Log", back_populates="adjustments")
 
+class Food(Base):
+    __tablename__ = 'foods'
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    measure = Column(String) # e.g. "1 colher de sopa"
+    carbs = Column(Float) # g of CHO
+
 # Database Setup
 DATABASE_URL = "sqlite:///./diabetes.db"
 engine = create_engine(DATABASE_URL)

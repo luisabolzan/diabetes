@@ -1,5 +1,5 @@
 from nicegui import ui
-from database import init_db, SessionLocal, Settings, Log, Feedback, Adjustment
+from database import init_db, SessionLocal, Settings, Log, Feedback, Adjustment, Food
 from sqlalchemy.orm import joinedload
 from calculator import InsulinCalculator
 from datetime import datetime
@@ -46,6 +46,16 @@ def save_log(log_data):
     session.commit()
     session.close()
     ui.notify('Log Saved to History', type='positive')
+
+def get_foods(query):
+    session = SessionLocal()
+    if query:
+        # Case insensitive search
+        foods = session.query(Food).filter(Food.name.ilike(f"%{query}%")).limit(50).all()
+    else:
+        foods = session.query(Food).limit(20).all()
+    session.close()
+    return foods
 
 def get_logs():
     session = SessionLocal()
@@ -237,6 +247,68 @@ def main_page():
                 with ui.grid(columns=2).classes('w-full gap-6'):
                     glucose_input = ui.number(label='Current Glucose (mg/dL)', value=120, format='%.0f').classes('w-full input-field').props('dark filled')
                     carbs_input = ui.number(label='Carbs (g)', value=0, format='%.0f').classes('w-full input-field').props('dark filled')
+                
+                # --- MEAL BUILDER ---
+                with ui.dialog() as food_dialog, ui.card().classes('w-full max-w-4xl glass-panel p-6'):
+                    ui.label('Meal Builder').classes('text-h5 text-cyan-300 font-bold q-mb-md')
+                    
+                    search = ui.input(placeholder='Search food...', on_change=lambda e: update_search(e.value)).classes('w-full input-field q-mb-md').props('dark filled append=search')
+                    
+                    results_container = ui.column().classes('w-full h-64 overflow-y-auto q-mb-md p-2 border border-white/10 rounded')
+                    
+                    plate_container = ui.column().classes('w-full bg-black/20 p-4 rounded-lg q-mb-md')
+                    plate_items = []
+                    
+                    def add_to_plate(food):
+                        plate_items.append(food)
+                        update_plate()
+                    
+                    def remove_from_plate(idx):
+                        plate_items.pop(idx)
+                        update_plate()
+                        
+                    def update_plate():
+                        plate_container.clear()
+                        total_carbs = sum(f.carbs for f in plate_items)
+                        with plate_container:
+                            ui.label(f'Virtual Plate (Total: {total_carbs:.1f}g CHO)').classes('text-lg text-green-400 font-bold q-mb-sm')
+                            with ui.scroll_area().classes('h-32 w-full'):
+                                for i, f in enumerate(plate_items):
+                                    with ui.row().classes('w-full items-center justify-between q-py-xs border-b border-white/5'):
+                                        ui.label(f"{f.name} ({f.measure})").classes('text-sm text-grey-300')
+                                        with ui.row().classes('items-center gap-2'):
+                                            ui.label(f"{f.carbs}g").classes('text-sm font-bold text-white')
+                                            ui.button(icon='delete', on_click=lambda idx=i: remove_from_plate(idx)).props('flat dense round text-color=red-400 size=sm')
+                    
+                    def update_search(query):
+                        results_container.clear()
+                        foods = get_foods(query)
+                        with results_container:
+                            for f in foods:
+                                with ui.row().classes('w-full items-center justify-between q-py-sm hover:bg-white/5 cursor-pointer rounded px-2'):
+                                    with ui.column().classes('gap-0'):
+                                        ui.label(f.name).classes('text-white font-medium')
+                                        ui.label(f.measure).classes('text-xs text-grey-400')
+                                    with ui.row().classes('items-center gap-2'):
+                                        ui.label(f"{f.carbs}g").classes('text-cyan-300 font-bold')
+                                        ui.button('Add', on_click=lambda food=f: add_to_plate(food)).props('flat dense size=sm color=cyan-400')
+                    
+                    def confirm_meal():
+                        total = sum(f.carbs for f in plate_items)
+                        carbs_input.value = total
+                        food_dialog.close()
+                        ui.notify(f'Filled {total}g from Meal Builder!', type='positive')
+                        
+                    with ui.row().classes('w-full justify-end gap-4'):
+                        ui.button('Cancel', on_click=food_dialog.close).props('flat color=grey')
+                        ui.button('Use Total Carbs', on_click=confirm_meal).classes('bg-gradient-to-r from-cyan-500 to-blue-500 text-white')
+                    
+                    # Initial load
+                    update_search('')
+                    update_plate()
+
+                ui.button('Open Meal Builder', icon='restaurant_menu', on_click=food_dialog.open).classes('w-full q-mt-sm bg-purple-900/50 text-purple-200 border border-purple-500/30 hover:bg-purple-800/50').props('flat')
+                # ---------------------
                 
                 ui.label('Context').classes('text-subtitle1 q-mt-md text-cyan-200 opacity-80')
                 activity_select = ui.select(
