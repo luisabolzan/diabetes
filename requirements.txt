@@ -1,0 +1,3 @@
+nicegui
+sqlalchemy
+pywebview

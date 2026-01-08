@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+diabetes.db
+*.exe
+build/
+dist/
+*.spec
+.vscode/
