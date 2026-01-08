@@ -245,11 +245,38 @@ def main_page():
         # --- CALCULATOR TAB ---
         with ui.tab_panel(calc_tab):
             with ui.card().classes('w-full max-w-lg mx-auto p-6 glass-panel no-shadow'):
+                # --- LIVE STATUS DASHBOARD ---
+                status_container = ui.column().classes('w-full items-center justify-center q-mb-lg p-2 bg-black/20 rounded-lg')
+                def update_live_status():
+                    status_container.clear()
+                    try:
+                        mins = int(last_dose_input.value)
+                    except:
+                        mins = 180 # Safe default
+                        
+                    is_peak = 60 <= mins <= 120
+                    with status_container:
+                         if is_peak:
+                             with ui.row().classes('bg-red-500/20 border border-red-500 rounded-full px-4 py-1 items-center gap-2'):
+                                    ui.icon('warning', color='red-400')
+                                    ui.label('PEAK ACTION').classes('text-red-400 font-bold')
+                             ui.label(f'{mins} min ago - Exercise Risk: HIGH').classes('text-red-300 text-xs q-mt-xs font-bold uppercase tracking-widest')
+                         else:
+                             with ui.row().classes('bg-green-500/20 border border-green-500 rounded-full px-4 py-1 items-center gap-2'):
+                                    ui.icon('check_circle', color='green-400')
+                                    ui.label('SAFE TAIL').classes('text-green-400 font-bold')
+                             ui.label(f'{mins} min ago - Exercise Risk: LOW').classes('text-green-300 text-xs q-mt-xs font-bold uppercase tracking-widest')
+
                 ui.label('Bolus Calculator').classes('text-h5 q-mb-lg text-cyan-300 font-bold text-center')
                 
                 with ui.grid(columns=2).classes('w-full gap-6'):
                     glucose_input = ui.number(label='Current Glucose (mg/dL)', value=120, format='%.0f').classes('w-full input-field').props('dark filled')
                     carbs_input = ui.number(label='Carbs (g)', value=0, format='%.0f').classes('w-full input-field').props('dark filled')
+                
+                # Manual Override Input
+                last_dose_input = ui.number(label='Time Since Last Dose (min)', value=180, format='%.0f', on_change=lambda: update_live_status()).classes('w-full input-field q-mt-md').props('dark filled')
+                # Initialize status
+                update_live_status()
                 
                 # --- MEAL BUILDER ---
                 with ui.dialog() as food_dialog, ui.card().classes('w-full max-w-4xl glass-panel p-6'):
@@ -362,13 +389,29 @@ def main_page():
                         ui.notify('Invalid Input', type='negative', color='red-5')
                         return
 
-                    res = calc.calculate_dose(g, c, activity_select.value, emotion_select.value, history)
+                    res = calc.calculate_dose(g, c, activity_select.value, emotion_select.value, history, manual_last_bolus_min=int(last_dose_input.value))
                     
                     result_area.clear()
                     result_area.classes(remove='hidden')
                     
                     with result_area:
                         ui.separator().classes('bg-cyan-900 opacity-50')
+                        
+                        # Risk Status Badge
+                        risk = res.get('risk_state', 'LOW')
+                        if risk == 'HIGH':
+                            with ui.row().classes('w-full justify-center q-mt-md'):
+                                with ui.row().classes('bg-red-500/20 border border-red-500 rounded-full px-4 py-1 items-center gap-2'):
+                                    ui.icon('warning', color='red-400')
+                                    ui.label('PEAK ACTION').classes('text-red-400 font-bold')
+                            ui.label('Exercise Risk: HIGH').classes('text-center text-red-300 text-xs q-mt-xs font-bold uppercase tracking-widest w-full')
+                        else:
+                            with ui.row().classes('w-full justify-center q-mt-md'):
+                                with ui.row().classes('bg-green-500/20 border border-green-500 rounded-full px-4 py-1 items-center gap-2'):
+                                    ui.icon('check_circle', color='green-400')
+                                    ui.label('SAFE TAIL').classes('text-green-400 font-bold')
+                            ui.label('Exercise Risk: LOW').classes('text-center text-green-300 text-xs q-mt-xs font-bold uppercase tracking-widest w-full')
+
                         with ui.row().classes('w-full justify-center q-my-md'):
                              ui.label(f"{res['recommended_dose']} units").classes('text-6xl text-cyan-400 font-black drop-shadow-lg')
                         ui.label("Recommended Dose").classes('text-center text-grey-400 text-sm uppercase tracking-widest w-full')

@@ -48,7 +48,8 @@ class InsulinCalculator:
                        carbs: int, 
                        activity: str, 
                        emotion: str, 
-                       history: List[Log]) -> dict:
+                       history: List[Log],
+                       manual_last_bolus_min: Optional[int] = None) -> dict:
         
         current_time = datetime.now()
         
@@ -92,12 +93,48 @@ class InsulinCalculator:
         # We assume "Exercise" is the one that lowers glucose (negative factor)
         # If activity lowers glucose (< 0) and emotion raises glucose (> 0), ignore emotion.
         
-        if act_mod < 0 and emo_mod > 0:
-            final_modifier = act_mod
-            notes = "Priority Rule Applied: Ignored emotion stress spike due to exercise."
+        # --- Peak Window Logic (Hard Override) ---
+        last_bolus_mins = 9999
+        risk_state = "LOW"
+        
+        if manual_last_bolus_min is not None:
+             last_bolus_mins = manual_last_bolus_min
         else:
-            final_modifier = act_mod + emo_mod
-            notes = "Standard modifiers applied."
+            # Find last meaningful dose
+            for log in history:
+                if log.actual_dose and log.actual_dose > 0.5:
+                    delta = (current_time - log.timestamp).total_seconds() / 60
+                    if delta >= 0:
+                        last_bolus_mins = delta
+                        break
+        
+        is_peak_window = (60 <= last_bolus_mins <= 120)
+        
+        if activity != "None" and is_peak_window:
+            # Danger Zone override
+            final_modifier = -0.50
+            notes = "⚠️ PEAK RISK: Maximum Safety Reduction (-50%) applied."
+            risk_state = "HIGH"
+        else:
+            # Standard Logic
+            if act_mod < 0 and emo_mod > 0:
+                final_modifier = act_mod
+                notes = "Priority Rule Applied: Ignored emotion stress spike due to exercise."
+            else:
+                final_modifier = act_mod + emo_mod
+                notes = "Standard modifiers applied."
+                
+            if is_peak_window:
+                 # In window but no activity, still alert? User said "AND Activity == True" for the reduction.
+                 # But UI status might want to show peak anyway? 
+                 # Request says: visual status... State A (During Peak).
+                 # Let's set HIGH if in Window, but only reduce if Active?
+                 # "Risk of hypoglycemia is tied to Peak Moment... IF Time... AND Activity... THEN Reduce"
+                 # "State A (During Peak): Display PEAK ACTION".
+                 # So risk state is HIGH (Time based), but reduction is conditional.
+                 # Actually, "Exercise Risk: HIGH". So if I am NOT exercising, is the risk high?
+                 # Let's stick to: In Window = Peak Action state.
+                 risk_state = "HIGH"
             
         adjusted_insulin = gross_insulin * (1 + final_modifier)
         
@@ -112,7 +149,7 @@ class InsulinCalculator:
         # Rounding suggestion
         # Determine rounding based on total dose size? Usually to nearest 0.5 or 1.0. 
         # Requirement says "advise on rounding logic". Let's round to nearest 0.5 for now.
-        recommended_dose = round(final_dose * 2) / 2
+        recommended_dose = round(final_dose)
         
         return {
             "carb_dose": carb_insulin,
@@ -125,5 +162,6 @@ class InsulinCalculator:
             "adjusted_dose": adjusted_insulin,
             "final_dose_raw": final_dose,
             "recommended_dose": recommended_dose,
+            "risk_state": risk_state,
             "notes": notes
         }
