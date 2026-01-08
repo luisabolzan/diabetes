@@ -69,19 +69,19 @@ class InsulinCalculator:
         # 2. Contextual Modifiers
         modifier_percent = 0.0
         
-        # Activity Factors
+        # Activity Factors (Dynamic)
         activity_factors = {
-            "Gym/Weights": 0.10,   # +10%
-            "Running": -0.30,      # -30%
-            "Swimming": -0.30,     # -30%
-            "Yoga": -0.10,         # -10%
+            "Gym/Weights": self.settings.mod_gym,
+            "Running": self.settings.mod_run,
+            "Swimming": self.settings.mod_swim,
+            "Yoga": self.settings.mod_yoga,
             "None": 0.0
         }
         
-        # Emotion Factors
+        # Emotion Factors (Dynamic)
         emotion_factors = {
-            "Stress": 0.20,    # +20%
-            "Anxious": 0.10,   # +10%
+            "Stress": self.settings.mod_stress,
+            "Anxious": self.settings.mod_anxious,
             "Calm": 0.0
         }
         

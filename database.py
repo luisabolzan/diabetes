@@ -17,6 +17,16 @@ class Settings(Base):
     target_glucose = Column(Integer, default=90) # Target Blood Glucose
     correction_threshold = Column(Integer, default=120) # Threshold for correction
     duration_of_action = Column(Float, default=4.0) # Hours
+    
+    # Dynamic Modifiers (Activity)
+    mod_gym = Column(Float, default=0.10)
+    mod_run = Column(Float, default=-0.30)
+    mod_swim = Column(Float, default=-0.30)
+    mod_yoga = Column(Float, default=-0.10)
+    
+    # Dynamic Modifiers (Emotion)
+    mod_stress = Column(Float, default=0.20)
+    mod_anxious = Column(Float, default=0.10)
 
 class Log(Base):
     __tablename__ = 'logs'
@@ -32,6 +42,8 @@ class Log(Base):
     
     # Relationship to feedback
     feedback = relationship("Feedback", uselist=False, back_populates="log")
+    # Relationship to adjustments
+    adjustments = relationship("Adjustment", back_populates="log")
 
 class Feedback(Base):
     __tablename__ = 'feedback'
@@ -42,6 +54,19 @@ class Feedback(Base):
     notes = Column(String)
     
     log = relationship("Log", back_populates="feedback")
+
+class Adjustment(Base):
+    __tablename__ = 'adjustments'
+    
+    id = Column(Integer, primary_key=True)
+    ref_log_id = Column(Integer, ForeignKey('logs.id'))
+    parameter = Column(String) # e.g. "mod_run"
+    old_value = Column(Float)
+    new_value = Column(Float)
+    rationale = Column(String)
+    timestamp = Column(DateTime, default=datetime.now)
+    
+    log = relationship("Log", back_populates="adjustments")
 
 # Database Setup
 DATABASE_URL = "sqlite:///./diabetes.db"
