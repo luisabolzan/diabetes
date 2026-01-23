@@ -13,6 +13,20 @@ function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  if (!supabase) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <h1 className="text-3xl font-bold text-red-500 mb-4">Configuration Error</h1>
+        <p className="text-slate-300 mb-4">Supabase Environment Variables are missing.</p>
+        <div className="bg-slate-800 p-4 rounded-lg text-left text-xs font-mono text-slate-400 overflow-x-auto w-full max-w-md">
+          <p>VITE_SUPABASE_URL=...</p>
+          <p>VITE_SUPABASE_ANON_KEY=...</p>
+        </div>
+        <p className="mt-6 text-sm text-slate-500">Please add these to your Vercel Project Settings.</p>
+      </div>
+    );
+  }
+
   useEffect(() => {
     // Check active session
     supabase.auth.getSession().then(({ data: { session } }) => {
