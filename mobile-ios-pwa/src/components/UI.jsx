@@ -6,7 +6,7 @@ export const Card = ({ children, className = "" }) => (
     </div>
 );
 
-export const Button = ({ children, onClick, className = "", secondary = false, danger = false }) => {
+export const Button = ({ children, onClick, className = "", secondary = false, danger = false, ...props }) => {
     let baseClass = "bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold py-3 px-6 rounded-xl w-full shadow-lg transition-transform active:scale-95";
 
     if (secondary) {
@@ -17,9 +17,11 @@ export const Button = ({ children, onClick, className = "", secondary = false, d
     }
 
     return (
-        <button type="button" onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
+        <button type={props.type || "button"} onClick={(e) => {
+            if (props.type !== "submit") {
+                e.preventDefault();
+                e.stopPropagation();
+            }
             if (onClick) onClick(e);
         }} className={`${baseClass} ${className}`}>
             {children}

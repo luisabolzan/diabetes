@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, Button } from './UI';
 
-export const HistoryView = ({ logs, setLogs }) => {
+export const HistoryView = ({ logs, deleteLog }) => {
 
     const [isExporting, setIsExporting] = React.useState(false);
 
@@ -40,10 +40,10 @@ export const HistoryView = ({ logs, setLogs }) => {
     };
 
     // Basic delete function
-    const deleteLog = (index) => {
-        const newLogs = [...logs];
-        newLogs.splice(index, 1);
-        setLogs(newLogs);
+    const handleDelete = (id) => {
+        if (confirm("Delete this log?")) {
+            deleteLog(id);
+        }
     };
 
     return (
@@ -83,7 +83,7 @@ export const HistoryView = ({ logs, setLogs }) => {
                                 <span className="bg-slate-800 px-2 py-1 rounded text-purple-200">{log.emotion}</span>
                             </div>
                             <button
-                                onClick={() => deleteLog(idx)}
+                                onClick={() => handleDelete(log.id)}
                                 className="text-red-400 text-xs hover:text-red-300"
                             >
                                 Delete
