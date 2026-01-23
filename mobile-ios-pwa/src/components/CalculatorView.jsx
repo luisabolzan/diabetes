@@ -125,7 +125,7 @@ export const CalculatorView = ({ settings, logs, onSaveLog, initialCarbs, setSha
                             label="Carbs / Food Search"
                             value={searchQuery}
                             onChange={handleInputChange}
-                            placeholder="e.g. 45 or 'Apple'"
+                            placeholder="45 or 'Apple'"
                             type="text"
                         />
                         {/* Search Results Dropdown */}

@@ -50,7 +50,7 @@ export const HistoryView = ({ logs, deleteLog }) => {
         <div className="pb-24 animate-fade-in">
             <div className="flex justify-between items-center mb-6 px-2">
                 <h2 className="text-2xl font-bold text-cyan-400">History</h2>
-                <Button onClick={handleExport} className="w-auto py-2 px-4 text-sm" secondary>Export CSV</Button>
+                <Button onClick={handleExport} className="!w-auto !py-1 !px-3 !text-xs" secondary>Export CSV</Button>
             </div>
 
             {logs.length === 0 && (
