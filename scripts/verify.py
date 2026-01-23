@@ -1,5 +1,5 @@
-from database import init_db, SessionLocal, Settings, Log
-from calculator import InsulinCalculator
+from src.database import init_db, SessionLocal, Settings, Log
+from src.calculator import InsulinCalculator
 from datetime import datetime
 
 def test_calculator():
@@ -22,6 +22,15 @@ def test_calculator():
     settings.icr_lunch = 10.0
     settings.icr_dinner = 10.0
     settings.icr_snack = 10.0
+    
+    # Reset modifiers for deterministic testing
+    settings.mod_run = -0.30
+    settings.mod_stress = 0.20
+    settings.mod_anxious = 0.10
+    settings.mod_gym = 0.10
+    settings.mod_swim = -0.30
+    settings.mod_beach_tennis = -0.20
+    
     session.commit()
     
     calc = InsulinCalculator(settings)

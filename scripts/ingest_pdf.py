@@ -1,5 +1,5 @@
 from pypdf import PdfReader
-from database import init_db, SessionLocal, Food
+from src.database import init_db, SessionLocal, Food
 import re
 
 def ingest():
@@ -12,7 +12,7 @@ def ingest():
     session.commit()
     print("Cleared existing food data.")
 
-    reader = PdfReader("manual-carboidratos.pdf")
+    reader = PdfReader("data/manual-carboidratos.pdf")
     count = 0
     
     print(f"Processing {len(reader.pages)} pages...")

@@ -1,7 +1,7 @@
 from nicegui import ui
-from database import init_db, SessionLocal, Settings, Log, Feedback, Adjustment, Food
+from src.database import init_db, SessionLocal, Settings, Log, Feedback, Adjustment, Food
 from sqlalchemy.orm import joinedload
-from calculator import InsulinCalculator
+from src.calculator import InsulinCalculator
 from datetime import datetime
 import csv
 import io
@@ -616,17 +616,7 @@ def main_page():
                 ui.number('Correction Threshold (mg/dL)', value=s_values['correction_threshold'], on_change=lambda e: s_values.update({'correction_threshold': e.value})).classes('w-full input-field').props('dark filled')
 
                 
-                ui.label('Adaptive Modifiers (Current)').classes('text-subtitle2 q-mt-lg text-purple-200')
-                with ui.grid(columns=2).classes('gap-4'):
-                     ui.number('Gym/Weights', value=s_values['mod_gym'], format='%.2f', on_change=lambda e: s_values.update({'mod_gym': e.value})).classes('input-field').props('dark filled')
-                     ui.number('Running', value=s_values['mod_run'], format='%.2f', on_change=lambda e: s_values.update({'mod_run': e.value})).classes('input-field').props('dark filled')
-                     ui.number('Swimming', value=s_values['mod_swim'], format='%.2f', on_change=lambda e: s_values.update({'mod_swim': e.value})).classes('input-field').props('dark filled')
-                     ui.number('Beach Tennis', value=s_values['mod_beach_tennis'], format='%.2f', on_change=lambda e: s_values.update({'mod_beach_tennis': e.value})).classes('input-field').props('dark filled')
-                     
-                     ui.separator().classes('col-span-2 bg-white/10 q-my-sm')
-                     
-                     ui.number('Stress', value=s_values['mod_stress'], format='%.2f', on_change=lambda e: s_values.update({'mod_stress': e.value})).classes('input-field').props('dark filled')
-                     ui.number('Anxious', value=s_values['mod_anxious'], format='%.2f', on_change=lambda e: s_values.update({'mod_anxious': e.value})).classes('input-field').props('dark filled')
+
                 
                 ui.button('Save Settings', on_click=lambda: save_settings(s_values)).classes('w-full q-mt-xl action-btn py-2')
 

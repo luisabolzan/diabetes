@@ -1,4 +1,4 @@
-from database import engine, SessionLocal
+from src.database import engine, SessionLocal
 from sqlalchemy import text
 
 def migrate():

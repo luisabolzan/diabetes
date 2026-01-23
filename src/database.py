@@ -81,7 +81,7 @@ class Food(Base):
     kcal = Column(Integer) # Calories
 
 # Database Setup
-DATABASE_URL = "sqlite:///./diabetes.db"
+DATABASE_URL = "sqlite:///./data/diabetes.db"
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

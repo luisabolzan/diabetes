@@ -1,5 +1,5 @@
-from calculator import InsulinCalculator
-from database import Settings, Log
+from src.calculator import InsulinCalculator
+from src.database import Settings, Log
 from datetime import datetime, timedelta
 
 def test_peak_window():

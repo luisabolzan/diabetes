@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from database import Settings, Log
+from src.database import Settings, Log
 from typing import List, Optional
 
 class InsulinCalculator:

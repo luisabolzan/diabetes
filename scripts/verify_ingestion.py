@@ -1,4 +1,4 @@
-from database import SessionLocal, Food
+from src.database import SessionLocal, Food
 
 def verify():
     session = SessionLocal()

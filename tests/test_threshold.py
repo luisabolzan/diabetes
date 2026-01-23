@@ -1,5 +1,5 @@
-from database import init_db, SessionLocal, Settings
-from calculator import InsulinCalculator
+from src.database import init_db, SessionLocal, Settings
+from src.calculator import InsulinCalculator
 
 def test_threshold():
     init_db()

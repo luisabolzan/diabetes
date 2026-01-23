@@ -1,4 +1,4 @@
-from database import init_db, SessionLocal, Food
+from src.database import init_db, SessionLocal, Food
 import re
 
 def ingest():
@@ -10,7 +10,7 @@ def ingest():
     session.commit()
     print("Cleared existing food data.")
 
-    filename = "food_table.md"
+    filename = "data/food_table.md"
     count = 0
     
     print(f"Reading {filename}...")
