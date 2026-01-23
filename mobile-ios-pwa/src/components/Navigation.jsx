@@ -2,8 +2,8 @@ import React from 'react';
 
 export const Navigation = ({ activeTab, onTabChange }) => {
     const tabs = [
-        { id: 'calculator', label: 'Calculator', icon: '🧮' },
-        { id: 'history', label: 'History', icon: 'mb:list' },
+        { id: 'calculator', label: 'Dashboard', icon: '🏠' },
+        { id: 'history', label: 'History', icon: '📜' },
         { id: 'settings', label: 'Settings', icon: '⚙️' },
     ];
 

@@ -4,10 +4,14 @@ import { Navigation } from './components/Navigation';
 import { CalculatorView } from './components/CalculatorView';
 import { HistoryView } from './components/HistoryView';
 import { SettingsView } from './components/SettingsView';
+import { MealBuilderView } from './components/MealBuilderView';
 import './styles/index.css';
 
 function App() {
   const [activeTab, setActiveTab] = useState('calculator');
+
+  // Shared State for Calculator Interaction
+  const [sharedCarbs, setSharedCarbs] = useState(0);
 
   // Default Settings
   const defaultSettings = {
@@ -33,6 +37,12 @@ function App() {
   const handleSaveLog = (newLog) => {
     setLogs([newLog, ...logs]);
     setActiveTab('history');
+    setSharedCarbs(0); // Reset after save
+  };
+
+  const handleCommitMeal = (totalCarbs) => {
+    setSharedCarbs(totalCarbs);
+    setActiveTab('calculator');
   };
 
   return (
@@ -42,9 +52,15 @@ function App() {
         <p className="subtitle text-xs">Local PWA Mode</p>
       </header>
 
-      <main className="main-content flex-1 overflow-y-auto w-full max-w-lg mx-auto pb-24">
+      <main className="main-content flex-1 overflow-y-auto w-full max-w-lg mx-auto pb-24 no-scrollbar">
         {activeTab === 'calculator' && (
-          <CalculatorView settings={settings} logs={logs} onSaveLog={handleSaveLog} />
+          <CalculatorView
+            settings={settings}
+            logs={logs}
+            onSaveLog={handleSaveLog}
+            initialCarbs={sharedCarbs}
+            setSharedCarbs={setSharedCarbs}
+          />
         )}
         {activeTab === 'history' && (
           <HistoryView logs={logs} setLogs={setLogs} />
