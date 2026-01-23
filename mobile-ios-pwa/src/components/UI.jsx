@@ -17,7 +17,11 @@ export const Button = ({ children, onClick, className = "", secondary = false, d
     }
 
     return (
-        <button onClick={onClick} className={`${baseClass} ${className}`}>
+        <button type="button" onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (onClick) onClick(e);
+        }} className={`${baseClass} ${className}`}>
             {children}
         </button>
     );

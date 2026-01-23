@@ -3,8 +3,13 @@ import { Card, Button } from './UI';
 
 export const HistoryView = ({ logs, setLogs }) => {
 
+    const [isExporting, setIsExporting] = React.useState(false);
+
     const handleExport = () => {
-        if (!logs.length) return;
+        if (!logs.length || isExporting) return;
+
+        setIsExporting(true);
+        setTimeout(() => setIsExporting(false), 1000); // 1s Debounce
 
         // Create CSV content
         const headers = ["Timestamp", "Glucose", "Carbs", "Activity", "Emotion", "Recommended Dose", "Actual Dose"];

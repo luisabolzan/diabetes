@@ -198,7 +198,7 @@ export class InsulinCalculator {
         // Safety floor
         if (adjusted_insulin < 0) adjusted_insulin = 0.0;
 
-        const recommended_dose = Math.round(adjusted_insulin * 2) / 2; // Round to nearest 0.5
+        const recommended_dose = Math.round(adjusted_insulin); // Round to nearest integer (No half-units)
 
         return {
             carb_dose: carb_insulin,
