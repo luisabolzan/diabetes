@@ -81,7 +81,7 @@ function App() {
 
   return (
     <div className="app-container">
-      <header className="app-header mb-4 flex justify-between items-center">
+      <header className="app-header mb-4 flex justify-between items-center px-6 pt-4">
         <div>
           <h1 className="text-2xl">Diabetes Manager</h1>
           <p className="subtitle text-xs truncate max-w-[200px]">{session.user.email}</p>
@@ -91,7 +91,7 @@ function App() {
         </button>
       </header>
 
-      <main className="main-content flex-1 overflow-y-auto w-full max-w-lg mx-auto pb-24 no-scrollbar">
+      <main className="main-content flex-1 overflow-y-auto w-full max-w-lg mx-auto pb-24 px-6 no-scrollbar">
         {activeTab === 'calculator' && (
           <CalculatorView
             settings={settings}
