@@ -1,10 +1,13 @@
-from nicegui import ui
+from nicegui import ui, run
 from src.database import init_db, SessionLocal, Settings, Log, Feedback, Adjustment, Food
 from sqlalchemy.orm import joinedload
 from src.calculator import InsulinCalculator
 from datetime import datetime
 import csv
 import io
+import os
+import torch
+from src.predict import predict_bytes, DualBranchModel, device
 
 # Initialize Database
 init_db()
@@ -25,14 +28,12 @@ def save_settings(s_input):
     settings.isf = float(s_input['isf'])
     settings.target_glucose = int(s_input['target_glucose'])
     settings.correction_threshold = int(s_input['correction_threshold'])
-    settings.correction_threshold = int(s_input['correction_threshold'])
     settings.weight = float(s_input.get('weight', 70.0))
     # Duration removed
     
     # Save Dynamic Modifiers
     settings.mod_gym = float(s_input.get('mod_gym', 0.10))
     settings.mod_run = float(s_input.get('mod_run', -0.30))
-    settings.mod_swim = float(s_input.get('mod_swim', -0.30))
     settings.mod_swim = float(s_input.get('mod_swim', -0.30))
     settings.mod_beach_tennis = float(s_input.get('mod_beach_tennis', -0.20))
     settings.mod_stress = float(s_input.get('mod_stress', 0.20))
@@ -53,9 +54,7 @@ def save_log(log_data):
 def get_all_food_options():
     session = SessionLocal()
     foods = session.query(Food).all()
-    # Create options for ui.select: list of dicts {'label': '...', 'value': ...}
     # Create options for ui.select: dict {value: label}
-    # This prevents [object Object] display issues in NiceGUI
     options = {}
     for f in foods:
         label = f"{f.name} ({f.measure}) - {f.carbs}g CHO | {f.kcal} Kcal"
@@ -87,8 +86,6 @@ def run_heuristic_adjustment(session, log, outcome):
     # Map activity/emotion names to Settings columns
     param_map = {
         "Gym/Weights": "mod_gym",
-        "Running": "mod_run",
-        "Swimming": "mod_swim",
         "Running": "mod_run",
         "Swimming": "mod_swim",
         "Beach Tennis": "mod_beach_tennis",
@@ -189,6 +186,7 @@ def save_feedback(log_id, outcome):
 def main_page():
     # Global Style - Deep Ocean Theme
     ui.add_head_html('''
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
         <style>
             :root {
                 --bg-deep: #0f172a;
@@ -245,14 +243,12 @@ def main_page():
     # Header
     with ui.header().classes('bg-transparent text-white'):
         with ui.row().classes('items-center q-ml-md'):
-            # simple icon if possible, or just text
             ui.label('Diabetes Manager').classes('text-h6 font-bold text-cyan-400')
 
     # Tabs
     with ui.tabs().classes('w-full text-grey-400') as tabs:
         calc_tab = ui.tab('Calculator').classes('text-lg')
         insights_tab = ui.tab('Insights').classes('text-lg') 
-        # Note: moved Insights content to its own panel below
         history_tab = ui.tab('History').classes('text-lg')
         settings_tab = ui.tab('Settings').classes('text-lg')
 
@@ -286,9 +282,9 @@ def main_page():
                 ui.label('Bolus Calculator').classes('text-h5 q-mb-lg text-cyan-300 font-bold text-center')
                 
                 with ui.grid(columns=3).classes('w-full gap-4'):
-                    glucose_input = ui.number(label='Current Glucose (mg/dL)', value=120, format='%.0f').classes('w-full input-field').props('dark filled')
+                    glucose_input = ui.number(label='Current Glucose', value=120, format='%.0f').classes('w-full input-field').props('dark filled')
                     carbs_input = ui.number(label='Carbs (g)', value=0, format='%.0f').classes('w-full input-field').props('dark filled')
-                    kcal_input = ui.number(label='Calories (Kcal)', value=0, format='%.0f').classes('w-full input-field').props('dark filled')
+                    kcal_input = ui.number(label='Calories', value=0, format='%.0f').classes('w-full input-field').props('dark filled')
                 
                 # Manual Override Input
                 last_dose_input = ui.number(label='Time Since Last Dose (min)', value=180, format='%.0f', on_change=lambda: update_live_status()).classes('w-full input-field q-mt-md').props('dark filled')
@@ -299,27 +295,19 @@ def main_page():
                 with ui.dialog() as food_dialog, ui.card().classes('w-full max-w-4xl glass-panel p-6'):
                     ui.label('Meal Builder').classes('text-h5 text-cyan-300 font-bold q-mb-md')
                     
-                    
-                    # Search replaced by ui.select below
-                    
-                    results_container = ui.column().classes('w-full h-64 overflow-y-auto q-mb-md p-2 border border-white/10 rounded')
-                    
                     plate_container = ui.column().classes('w-full bg-black/20 p-4 rounded-lg q-mb-md')
                     plate_items = []
                     
                     def add_to_plate(val):
                         if not val: return
                         
-                        # Handle potential dict input from ui.select
                         food_id = val
                         if isinstance(val, dict) and 'value' in val:
                             food_id = val['value']
                         
-                        # Ensure ID is valid (int)
                         try:
                             food_id = int(food_id)
                         except (ValueError, TypeError):
-                             # Fallback: if somehow it's still a dict or weird object, try to extract 'value' if possible
                              if hasattr(val, 'get'):
                                  try:
                                      food_id = int(val.get('value'))
@@ -332,14 +320,12 @@ def main_page():
                         food_item = session.query(Food).filter(Food.id == food_id).first()
                         
                         if food_item:
-                            # Create a simple object to hold the data
                             from types import SimpleNamespace
                             f = SimpleNamespace(name=food_item.name, measure=food_item.measure, carbs=food_item.carbs, kcal=food_item.kcal)
                             plate_items.append(f)
                             update_plate()
                             
                         session.close()
-                        # Reset selector
                         food_select.value = None
 
                     def remove_from_plate(idx):
@@ -360,19 +346,15 @@ def main_page():
                                             ui.label(f"{f.carbs}g | {f.kcal} Kcal").classes('text-sm font-bold text-white')
                                             ui.button(icon='delete', on_click=lambda idx=i: remove_from_plate(idx)).props('flat dense round text-color=red-400 size=sm')
 
-                    # Load options once
                     options = get_all_food_options()
                     
                     with ui.row().classes('w-full items-center gap-2'):
                         food_select = ui.select(
                             options=options, 
                             with_input=True, 
-                            label='Search food (Type to filter)',
+                            label='Search food',
                             on_change=lambda e: add_to_plate(e.value) if e.value else None
                         ).classes('w-full input-field').props('dark filled use-input behavior=menu')
-                        # Note: use-input enables text filtering in Quasar/NiceGUI
-
-                    # Legacy search UI removed
 
                     def confirm_meal():
                         total_c = sum(f.carbs for f in plate_items)
@@ -386,12 +368,9 @@ def main_page():
                         ui.button('Cancel', on_click=food_dialog.close).props('flat color=grey')
                         ui.button('Use Meal', on_click=confirm_meal).classes('bg-gradient-to-r from-cyan-500 to-blue-500 text-white')
                     
-                    # Initial load
-                    # Initial load
                     update_plate()
 
                 ui.button('Open Meal Builder', icon='restaurant_menu', on_click=food_dialog.open).classes('w-full q-mt-sm bg-purple-900/50 text-purple-200 border border-purple-500/30 hover:bg-purple-800/50').props('flat')
-                # ---------------------
                 
                 ui.label('Context').classes('text-subtitle1 q-mt-md text-cyan-200 opacity-80')
                 with ui.grid(columns=2).classes('gap-4'):
@@ -415,10 +394,9 @@ def main_page():
                 result_area = ui.column().classes('w-full q-mt-lg hidden')
                 
                 def on_calculate():
-                    # Load current settings
                     session = SessionLocal()
                     current_settings = session.query(Settings).first()
-                    history = session.query(Log).order_by(Log.timestamp.desc()).limit(10).all() # Get recent logs for IOB
+                    history = session.query(Log).order_by(Log.timestamp.desc()).limit(10).all()
                     session.close()
                     
                     calc = InsulinCalculator(current_settings)
@@ -442,7 +420,6 @@ def main_page():
                     with result_area:
                         ui.separator().classes('bg-cyan-900 opacity-50')
                         
-                        # Risk Status Badge
                         risk = res.get('risk_state', 'LOW')
                         if risk == 'HIGH':
                             with ui.row().classes('w-full justify-center q-mt-md'):
@@ -457,11 +434,9 @@ def main_page():
                                     ui.label('SAFE TAIL').classes('text-green-400 font-bold')
                             ui.label('Exercise Risk: LOW').classes('text-center text-green-300 text-xs q-mt-xs font-bold uppercase tracking-widest w-full')
 
-                        # Energy Expenditure
                         if res.get('energy_expended', 0) > 0:
                             ui.label(f"Est. Burn: ~{res['energy_expended']} Kcal ({res['mets']} METs)").classes('w-full text-center text-xs text-yellow-300 font-bold q-mt-sm')
 
-                        # Carb Refuel Warning
                         if res.get('carb_refuel_msg'):
                              with ui.row().classes('w-full justify-center q-mt-md'):
                                 with ui.row().classes('bg-orange-500/20 border border-orange-500 rounded-lg px-4 py-2 items-center gap-2'):
@@ -484,14 +459,13 @@ def main_page():
                             - **Adjusted**: {res['adjusted_dose']:.2f} u
                             """).classes('text-grey-300')
                         
-                        # Prepare log data
                         log_entry = {
                             "glucose": g,
                             "carbs": c,
                             "activity": activity_select.value,
                             "emotion": emotion_select.value,
                             "recommended_dose": res['recommended_dose'],
-                            "actual_dose": res['recommended_dose'], # Default to recommended
+                            "actual_dose": res['recommended_dose'], 
                             "timestamp": datetime.now()
                         }
                         
@@ -505,7 +479,6 @@ def main_page():
         with ui.tab_panel(insights_tab):
             with ui.card().classes('w-full max-w-4xl mx-auto p-6 glass-panel no-shadow h-full'):
                 ui.label('Activity Impact Analysis').classes('text-h5 text-cyan-300 font-bold q-mb-md')
-                ui.label('Visualize how duration and intensity affect insulin reduction.').classes('text-grey-400 q-mb-lg')
                 
                 with ui.row().classes('w-full items-center gap-4 q-mb-md'):
                      viz_activity = ui.select(
@@ -519,44 +492,30 @@ def main_page():
                      chart_container.clear()
                      act = viz_activity.value
                      if not act: return
-                     
-                     durations = list(range(0, 130, 10)) # 0 to 120 min
-                     
+                     durations = list(range(0, 130, 10))
                      series_slow = []
                      series_mod = []
                      series_fast = []
-                     
-                     
                      sim_weight = 70.0 
-                     
-                     # Instantiate calculator for visualization
                      s = get_settings()
                      calc = InsulinCalculator(s)
-                     
                      for d in durations:
-                         # Calculate for each intensity
                          r_slow = calc.calculate_activity_modifier(act, d, "Slow", sim_weight)
                          r_mod = calc.calculate_activity_modifier(act, d, "Moderate", sim_weight)
                          r_fast = calc.calculate_activity_modifier(act, d, "Fast", sim_weight)
-                         
                          series_slow.append(round(r_slow['modifier'] * 100, 1))
                          series_mod.append(round(r_mod['modifier'] * 100, 1))
                          series_fast.append(round(r_fast['modifier'] * 100, 1))
-                         
                      with chart_container:
                          ui.echart({
                             'tooltip': {'trigger': 'axis'},
                             'legend': {'textStyle': {'color': '#ccc'}},
                             'xAxis': {
-                                'type': 'category', 
-                                'data': durations, 
-                                'name': 'Min',
+                                'type': 'category', 'data': durations, 'name': 'Min',
                                 'axisLine': {'lineStyle': {'color': '#ccc'}}
                             },
                             'yAxis': {
-                                'type': 'value', 
-                                'name': '%',
-                                'axisLabel': {'formatter': '{value} %'},
+                                'type': 'value', 'name': '%',
                                 'axisLine': {'lineStyle': {'color': '#ccc'}},
                                 'splitLine': {'lineStyle': {'color': '#333'}}
                             },
@@ -570,8 +529,6 @@ def main_page():
                 
                 viz_activity.on_value_change(update_chart)
                 update_chart()
-            
-
 
         # --- SETTINGS TAB ---
         with ui.tab_panel(settings_tab):
@@ -579,7 +536,6 @@ def main_page():
             with ui.card().classes('w-full max-w-lg mx-auto p-6 glass-panel no-shadow'):
                 ui.label('Configuration').classes('text-h5 q-mb-lg text-cyan-300 font-bold')
                 
-                # We use a dict to hold values for easy saving
                 s_values = {
                     'icr_breakfast': current_s.icr_breakfast,
                     'icr_lunch': current_s.icr_lunch,
@@ -588,13 +544,8 @@ def main_page():
                     'isf': current_s.isf,
                     'target_glucose': current_s.target_glucose,
                     'correction_threshold': current_s.correction_threshold,
-                    'correction_threshold': current_s.correction_threshold,
-                    'weight': current_s.weight, # Added weight
-                    # 'duration': current_s.duration_of_action, removed
-                    # Modifiers
+                    'weight': current_s.weight,
                     'mod_gym': current_s.mod_gym,
-                    'mod_run': current_s.mod_run,
-                    'mod_swim': current_s.mod_swim,
                     'mod_run': current_s.mod_run,
                     'mod_swim': current_s.mod_swim,
                     'mod_beach_tennis': current_s.mod_beach_tennis,
@@ -611,13 +562,10 @@ def main_page():
 
                 ui.label('Personal Factors').classes('text-subtitle2 q-mt-lg text-cyan-100')
                 ui.number('Weight (kg)', value=s_values.get('weight', 70), on_change=lambda e: s_values.update({'weight': e.value})).classes('w-full input-field').props('dark filled')
-                ui.number('ISF (1u drops X mg/dL)', value=s_values['isf'], on_change=lambda e: s_values.update({'isf': e.value})).classes('w-full input-field').props('dark filled')
-                ui.number('Target Glucose (mg/dL)', value=s_values['target_glucose'], on_change=lambda e: s_values.update({'target_glucose': e.value})).classes('w-full input-field').props('dark filled')
-                ui.number('Correction Threshold (mg/dL)', value=s_values['correction_threshold'], on_change=lambda e: s_values.update({'correction_threshold': e.value})).classes('w-full input-field').props('dark filled')
+                ui.number('ISF', value=s_values['isf'], on_change=lambda e: s_values.update({'isf': e.value})).classes('w-full input-field').props('dark filled')
+                ui.number('Target Glucose', value=s_values['target_glucose'], on_change=lambda e: s_values.update({'target_glucose': e.value})).classes('w-full input-field').props('dark filled')
+                ui.number('Correction Threshold', value=s_values['correction_threshold'], on_change=lambda e: s_values.update({'correction_threshold': e.value})).classes('w-full input-field').props('dark filled')
 
-                
-
-                
                 ui.button('Save Settings', on_click=lambda: save_settings(s_values)).classes('w-full q-mt-xl action-btn py-2')
 
         # --- HISTORY TAB ---
@@ -628,7 +576,6 @@ def main_page():
                     ui.button(icon='refresh', on_click=lambda: refresh_history()).props('flat round dense text-color=cyan-400')
                     ui.button('Export', icon='download', on_click=export_logs).classes('bg-cyan-900 text-cyan-100').props('flat dense')
             
-            # Helper to refresh table
             def refresh_history():
                 history_container.clear()
                 logs = get_logs()
@@ -636,39 +583,140 @@ def main_page():
                     with history_container:
                          ui.label('No logs found.').classes('text-grey italic text-center w-full q-mt-lg')
                     return
-                
                 with history_container:
                     for l in logs:
                         with ui.card().classes('w-full q-mb-md p-4 glass-panel no-shadow border-l-4 border-cyan-500'):
                             with ui.row().classes('w-full items-center justify-between'):
                                 ui.label(l.timestamp.strftime('%Y-%m-%d %H:%M')).classes('font-bold text-gray-300')
                                 ui.label(f"{l.actual_dose} u").classes('text-cyan-400 font-black text-xl')
-                            
                             with ui.row().classes('w-full items-center gap-4 text-sm text-gray-400 q-mt-sm'):
                                 ui.label(f"Glu: {l.glucose} | Carb: {l.carbs}")
                                 ui.label(f"{l.activity} | {l.emotion}")
                             
-                            # Feedback Section
                             fb_text = l.feedback.outcome if l.feedback else "No Feedback"
                             fb_colors = {'Perfect': 'green-400', 'Hypo': 'red-400', 'Hyper': 'orange-400', 'No Feedback': 'grey-600'}
                             fb_c = fb_colors.get(fb_text, 'grey-600')
-                            
                             ui.separator().classes('q-my-sm bg-gray-700')
                             with ui.row().classes('items-center w-full justify-between'):
                                 ui.label(f"{fb_text}").classes(f'text-{fb_c} font-bold text-sm')
-                                
                                 with ui.button(icon='edit').props('flat round size=sm color=cyan-400'):
                                     with ui.menu().props('dark'):
                                         ui.menu_item('Hypo (Low)', on_click=lambda id=l.id: [save_feedback(id, 'Hypo'), refresh_history()])
                                         ui.menu_item('Perfect', on_click=lambda id=l.id: [save_feedback(id, 'Perfect'), refresh_history()])
                                         ui.menu_item('Hyper (High)', on_click=lambda id=l.id: [save_feedback(id, 'Hyper'), refresh_history()])
 
-            history_container = ui.column().classes('w-full max-w-2xl mx-auto')
-            refresh_history()
+    # --- SCAN FOOD ---
+    try:
+        model = DualBranchModel().to(device)
+        model.load_state_dict(torch.load("nutrition5k_model.pth", map_location=device))
+        model.eval()
+        print("Model loaded successfully.")
+    except Exception as e:
+        print(f"Warning: Model could not be loaded: {e}")
+        model = None
 
-    # Run native
-    # ui.run(title='Diabetes App', native=True) is called in logic below if ran as script, 
-    # but since we overwrite main.py we rely on standard "main" block.
+    scan_state = {
+        'image_bytes': None,
+        'uploaded_name': "Captured Image"
+    }
+    
+    # ----------------------------------------------------
+    # CRITICAL FIX 1: ASYNC UPLOAD HANDLER
+    # ----------------------------------------------------
+    async def handle_scan_upload(e):
+        try:
+            # Fix: Await the read coroutine
+            if hasattr(e.file, 'read'):
+                 # Check if it's awaitable (coroutine) or standard method
+                 # If user says it returns a coroutine, we await it.
+                 # In NiceGUI/Starlette, e.content is file-like, e.file is sometimes internal.
+                 # But sticking to user instructions:
+                 try:
+                    image_bytes = await e.file.read()
+                 except TypeError:
+                    # Fallback if it wasn't actually a coroutine
+                    image_bytes = e.file.read()
+            else:
+                 # Fallback if it's a file path string
+                 with open(e.file, 'rb') as f:
+                     image_bytes = f.read()
+
+            scan_state['image_bytes'] = image_bytes
+            scan_state['uploaded_name'] = "Captured Image"
+
+            scan_status_label.text = "Ready to analyze (Image Captured)"
+            scan_status_label.classes(remove='text-grey-400', add='text-green-400 font-bold')
+            analyze_btn.enable()
+            ui.notify('Image uploaded! Click Analyze.', type='positive')
+
+        except Exception as err:
+            print(f"ERROR reading upload: {err}")
+            ui.notify(f"Upload Error: {err}", type='negative')
+
+    async def analyze_image():
+        if not scan_state['image_bytes'] or not model:
+            ui.notify('Error: No image or model not loaded.', type='negative')
+            return
+        
+        # Loading Dialog
+        loading_dialog = ui.dialog()
+        with loading_dialog, ui.card().classes('w-64 items-center justify-center p-6 glass-panel'):
+             ui.spinner(size='lg', color='cyan-400')
+             ui.label('Analyzing...').classes('text-cyan-200 q-mt-md animate-pulse')
+             
+        loading_dialog.open()
+        
+        # ----------------------------------------------------
+        # CRITICAL FIX 2: ROBUST TRY/FINALLY & NON-BLOCKING
+        # ----------------------------------------------------
+        try:
+            # Run in separate thread (IO bound wrapper) to avoid freezing main loop
+            # We use io_bound (thread pool) because sharing the 'model' object across processes 
+            # (cpu_bound) causes pickling errors with PyTorch.
+            pred_carbs = await run.io_bound(predict_bytes, model, scan_state['image_bytes'])
+                
+            carbs_input.value = round(pred_carbs)
+            ui.notify(f"Prediction: {pred_carbs:.1f}g Carbs", type='positive', color='green')
+            scan_dialog.close()
+            
+            scan_state['image_bytes'] = None
+            scan_status_label.text = "Waiting for image..."
+            scan_status_label.classes(remove='text-green-400 font-bold', add='text-grey-400')
+            analyze_btn.disable()
+            
+        except Exception as e:
+            ui.notify(f"Analysis Failed: {e}", type='negative')
+            print(f"Error analyzing: {e}")
+        finally:
+            loading_dialog.close() # Always close the spinner!
+
+    with ui.dialog() as scan_dialog, ui.card().classes('glass-panel p-6 w-full max-w-sm'):
+        ui.label('Scan Food').classes('text-h6 text-cyan-300 font-bold q-mb-md text-center')
+        
+        scan_status_label = ui.label('Waiting for image...').classes('text-center text-xs q-mb-lg text-grey-400')
+        
+        with ui.column().classes('w-full gap-4'):
+            ui.upload(
+                label='Take Photo', 
+                auto_upload=True,
+                on_upload=handle_scan_upload
+            ).props('accept="image/*" capture="environment" color=cyan-500 flat bordered class="full-width"')
+            
+            ui.label('OR').classes('text-center text-xs font-bold text-grey-600')
+            
+            ui.upload(
+                label='Choose from Gallery', 
+                auto_upload=True,
+                on_upload=handle_scan_upload
+            ).props('accept="image/*" color=purple-400 flat bordered class="full-width"')
+            
+            analyze_btn = ui.button('ANALYZE & COUNT', on_click=analyze_image).classes('w-full bg-gradient-to-r from-green-400 to-cyan-500 text-white font-bold q-mt-md')
+            analyze_btn.disable()
+            
+            ui.button('Cancel', on_click=scan_dialog.close).props('flat color=grey class="full-width q-mt-sm"')
+
+    with ui.page_sticky(position='bottom-right', x_offset=20, y_offset=20):
+        ui.button(on_click=scan_dialog.open, icon='photo_camera').props('fab color=cyan-500 push size=lg shadow-lg').tooltip('Scan Food')
 
 if __name__ in {"__main__", "__mp_main__"}:
-    ui.run(title='Diabetes App', native=True, reload=False) # Reload false for production/native feel
+    ui.run(title='Diabetes App', native=True, reload=False)
