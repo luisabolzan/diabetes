@@ -7,7 +7,6 @@ WORKDIR /app
 # Install system dependencies required for OpenCV
 # libgl1-mesa-glx and libglib2.0-0 are critical for cv2 to work in Docker
 RUN apt-get update && apt-get install -y \
-    libgl1-mesa-glx \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
