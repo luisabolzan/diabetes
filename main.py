@@ -7,7 +7,7 @@ import csv
 import io
 import os
 import torch
-from src.predict import predict_bytes, DualBranchModel, device
+from src.predict import predict_bytes, RGBModel, device
 
 # Initialize Database
 init_db()
@@ -607,10 +607,10 @@ def main_page():
 
     # --- SCAN FOOD ---
     try:
-        model = DualBranchModel().to(device)
-        model.load_state_dict(torch.load("nutrition5k_model.pth", map_location=device))
+        model = RGBModel().to(device)
+        model.load_state_dict(torch.load("nutrition5k_model_rgb.pth", map_location=device))
         model.eval()
-        print("Model loaded successfully.")
+        print("Model loaded successfully (RGB-Only).")
     except Exception as e:
         print(f"Warning: Model could not be loaded: {e}")
         model = None

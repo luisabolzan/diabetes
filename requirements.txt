@@ -7,3 +7,5 @@ scikit-learn
 pillow
 numpy
 pywebview
+opencv-python
+gunicorn
