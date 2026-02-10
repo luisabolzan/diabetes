@@ -1,3 +1,11 @@
+# Build artifacts
+dist/
+build/
+*.spec
+*.exe
+*.pkg
+*.dmg
+
 # Use asterisco duplo para garantir que ele ache a pasta onde quer que ela esteja
 **/data/raw/
 **/data/processed/

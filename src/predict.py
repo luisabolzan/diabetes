@@ -1,10 +1,18 @@
 import os
 import io
-import torch
-import torch.nn as nn
+try:
+    import torch
+    import torch.nn as nn
+    from torchvision import transforms, models
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+    # Mock classes to prevent ImportErrors in other files
+    class nn:
+        Module = object
+    
 import random
 from PIL import Image
-from torchvision import transforms, models
 from src.data_loader import load_data
 
 import numpy as np
@@ -12,29 +20,36 @@ import cv2
 
 # --- Configuration ---
 IMG_SIZE = 224
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+if HAS_TORCH:
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+else:
+    device = None
 
 # --- RGB Model Architecture ---
-class RGBModel(nn.Module):
-    def __init__(self):
-        super(RGBModel, self).__init__()
-        # Load Pre-trained ResNet18
-        self.backbone = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
-        
-        # Replace the final fully connected layer for Regression
-        num_features = self.backbone.fc.in_features
-        
-        self.backbone.fc = nn.Sequential(
-            nn.Linear(num_features, 128),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Linear(64, 1)
-        )
+if HAS_TORCH:
+    class RGBModel(nn.Module):
+        def __init__(self):
+            super(RGBModel, self).__init__()
+            # Load Pre-trained ResNet18
+            self.backbone = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+            
+            # Replace the final fully connected layer for Regression
+            num_features = self.backbone.fc.in_features
+            
+            self.backbone.fc = nn.Sequential(
+                nn.Linear(num_features, 128),
+                nn.ReLU(),
+                nn.Dropout(0.3),
+                nn.Linear(128, 64),
+                nn.ReLU(),
+                nn.Linear(64, 1)
+            )
 
-    def forward(self, x):
-        return self.backbone(x)
+        def forward(self, x):
+            return self.backbone(x)
+else:
+    class RGBModel:
+        pass
 
 # --- TEXTURE ANALYSIS (NEW) ---
 def calculate_texture_area(image_bytes):

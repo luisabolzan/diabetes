@@ -6,8 +6,18 @@ from datetime import datetime
 import csv
 import io
 import os
-import torch
-from src.predict import predict_bytes, RGBModel, device
+try:
+    import torch
+    from src.predict import predict_bytes, RGBModel, device
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+    print("WARNING: PyTorch not found. AI features disabled.")
+    # Dummy objects to prevent NameError
+    predict_bytes = None
+    RGBModel = None
+    device = None
+
 
 # Initialize Database
 init_db()
@@ -607,13 +617,22 @@ def main_page():
                                         ui.menu_item('Hyper (High)', on_click=lambda id=l.id: [save_feedback(id, 'Hyper'), refresh_history()])
 
     # --- SCAN FOOD ---
-    try:
-        model = RGBModel().to(device)
-        model.load_state_dict(torch.load("nutrition5k_model_rgb.pth", map_location=device))
-        model.eval()
-        print("Model loaded successfully (RGB-Only).")
-    except Exception as e:
-        print(f"Warning: Model could not be loaded: {e}")
+    if HAS_TORCH:
+        try:
+            model = RGBModel().to(device)
+            # Check if file exists to avoid crash
+            if os.path.exists("nutrition5k_model_rgb.pth"):
+                model.load_state_dict(torch.load("nutrition5k_model_rgb.pth", map_location=device))
+                model.eval()
+                print("Model loaded successfully (RGB-Only).")
+            else:
+                print("Warning: Model file not found.")
+                model = None
+        except Exception as e:
+            print(f"Warning: Model could not be loaded: {e}")
+            model = None
+    else:
+        print("PyTorch not installed. App running in Lite Mode.")
         model = None
 
     scan_state = {
