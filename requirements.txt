@@ -1,11 +1,14 @@
 nicegui
 sqlalchemy
 pypdf
-torch
-torchvision
 scikit-learn
 pillow
 numpy
-pywebview
-opencv-python
-gunicorn
+# OPTIMIZATION: Use headless OpenCV to avoid huge Qt dependencies
+opencv-python-headless
+# OPTIMIZATION: Use CPU-only Torch wheels to stay under 250MB limit
+# Note: Vercel might struggle even with these. If it fails, consider removing PyTorch
+# and hosting the model inference elsewhere (e.g. HuggingFace Spaces).
+--find-links https://download.pytorch.org/whl/cpu/torch_stable.html
+torch==2.0.1+cpu
+torchvision==0.15.2+cpu

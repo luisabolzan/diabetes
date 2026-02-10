@@ -1,0 +1,11 @@
+nicegui
+sqlalchemy
+pypdf
+torch
+torchvision
+scikit-learn
+pillow
+numpy
+pywebview
+opencv-python
+gunicorn
