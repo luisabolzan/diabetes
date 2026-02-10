@@ -3,7 +3,7 @@ sqlalchemy
 pypdf
 scikit-learn
 pillow
-numpy
+numpy<2.0
 # OPTIMIZATION: Use headless OpenCV to avoid huge Qt dependencies
 opencv-python-headless
 # OPTIMIZATION: Use CPU-only Torch wheels (Works on Render)
