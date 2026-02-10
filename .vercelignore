@@ -1,0 +1,11 @@
+*.pth
+*.pt
+data/
+mobile-ios-pwa/
+dist/
+build/
+*.exe
+*.pkg
+*.dmg
+__pycache__/
+*.pyc

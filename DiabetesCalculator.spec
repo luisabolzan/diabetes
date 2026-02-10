@@ -5,8 +5,12 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('C:\\Users\\lulrb\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\nicegui', 'nicegui')],
-    hiddenimports=[],
+    datas=[
+        ('nutrition5k_model_rgb.pth', '.'),  # Bundle the model file
+        ('src', 'src'),                      # Bundle the source code
+        ('C:\\Users\\lulrb\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\nicegui', 'nicegui') # NiceGUI assets
+    ],
+    hiddenimports=['uvicorn', 'nicegui', 'sqlalchemy', 'cv2', 'torch', 'torchvision', 'numpy'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

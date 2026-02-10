@@ -739,4 +739,15 @@ def main_page():
         ui.button(on_click=scan_dialog.open, icon='photo_camera').props('fab color=cyan-500 push size=lg shadow-lg').tooltip('Scan Food')
 
 if __name__ in {"__main__", "__mp_main__"}:
-    ui.run(title='Diabetes App', native=True, reload=False)
+    # Check if running in Cloud (Render sets PORT env)
+    port = int(os.environ.get('PORT', 8080))
+    # Disable native mode if in cloud
+    is_native = os.environ.get('RENDER', 'False') == 'False'
+    
+    ui.run(
+        title='Diabetes App',
+        native=is_native, # True locally, False on Render
+        reload=False,
+        port=port,
+        host='0.0.0.0' # Listen on all interfaces
+    )

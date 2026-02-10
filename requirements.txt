@@ -6,6 +6,7 @@ pillow
 numpy
 # OPTIMIZATION: Use headless OpenCV to avoid huge Qt dependencies
 opencv-python-headless
-# PyTorch removed for Vercel Lite Mode (Size Limit)
-# torch==2.0.1+cpu
-# torchvision==0.15.2+cpu
+# OPTIMIZATION: Use CPU-only Torch wheels (Works on Render)
+--find-links https://download.pytorch.org/whl/cpu/torch_stable.html
+torch==2.0.1+cpu
+torchvision==0.15.2+cpu
