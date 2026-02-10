@@ -244,6 +244,7 @@ def main_page():
     with ui.header().classes('bg-transparent text-white'):
         with ui.row().classes('items-center q-ml-md'):
             ui.label('Diabetes Manager').classes('text-h6 font-bold text-cyan-400')
+            ui.label('v2.1 (Texture)').classes('text-xs text-cyan-200 q-ml-sm opacity-60')
 
     # Tabs
     with ui.tabs().classes('w-full text-grey-400') as tabs:
