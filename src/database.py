@@ -23,6 +23,7 @@ class Settings(Base):
     mod_run = Column(Float, default=-0.30)
     mod_swim = Column(Float, default=-0.30)
     mod_beach_tennis = Column(Float, default=-0.20)
+    mod_walking = Column(Float, default=-0.10)
     
     # Personal Params
     weight = Column(Float, default=70.0) # kg
@@ -80,34 +81,76 @@ class Food(Base):
     carbs = Column(Float) # g of CHO
     kcal = Column(Integer) # Calories
 
+class User(Base):
+    __tablename__ = 'users'
+    
+    id = Column(Integer, primary_key=True)
+    username = Column(String, unique=True)
+    email = Column(String, unique=True) 
+    password_hash = Column(String)
+    salt = Column(String)
+
 # Database Setup
 DATABASE_URL = "sqlite:///./data/diabetes.db"
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 from sqlalchemy import text
+import hashlib
+import os
 
 def init_db():
     Base.metadata.create_all(bind=engine)
     
-    # Auto-migration for 'weight' column
     session = SessionLocal()
+    
+    # Auto-migration for 'weight' column (Legacy check)
     try:
         session.execute(text("SELECT weight FROM settings LIMIT 1"))
     except Exception:
         print("Migrating DB: Adding weight column...")
-        session.rollback() # Clear error state
+        session.rollback() 
         try:
             session.execute(text("ALTER TABLE settings ADD COLUMN weight FLOAT DEFAULT 70.0"))
             session.commit()
             print("Migration successful.")
         except Exception as e:
             print(f"Migration failed: {e}")
+
+    # Auto-migration for 'mod_walking' column
+    try:
+        session.execute(text("SELECT mod_walking FROM settings LIMIT 1"))
+    except Exception:
+        print("Migrating DB: Adding mod_walking column...")
+        session.rollback()
+        try:
+            session.execute(text("ALTER TABLE settings ADD COLUMN mod_walking FLOAT DEFAULT -0.10"))
+            session.commit()
+            print("Migration successful.")
+        except Exception as e:
+            print(f"Migration failed: {e}")
             
     # Create default settings if not exists
-    # Now safe to query Settings because schema matches
     if session.query(Settings).count() == 0:
         default_settings = Settings()
         session.add(default_settings)
         session.commit()
+        
+    # Create default admin user if not exists
+    if session.query(User).count() == 0:
+        print("Creating default admin user...")
+        salt = os.urandom(32).hex()
+        # Simple sha256 for demo purposes (production should use bcrypt/argon2)
+        pwd_hash = hashlib.sha256(("admin" + salt).encode('utf-8')).hexdigest()
+        
+        admin_user = User(
+            username="admin",
+            email="admin@example.com",
+            password_hash=pwd_hash,
+            salt=salt
+        )
+        session.add(admin_user)
+        session.commit()
+        print("Default user created: admin / admin")
+        
     session.close()

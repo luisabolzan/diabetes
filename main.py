@@ -1,4 +1,6 @@
-from nicegui import ui, run
+from nicegui import ui, run, app
+from src.login_page import login_page
+from src.register_page import register_page
 from src.database import init_db, SessionLocal, Settings, Log, Feedback, Adjustment, Food
 from sqlalchemy.orm import joinedload
 from src.calculator import InsulinCalculator
@@ -194,6 +196,10 @@ def save_feedback(log_id, outcome):
 
 @ui.page('/')
 def main_page():
+    if not app.storage.user.get('access_token'):
+        ui.navigate.to('/login')
+        return
+
     # Global Style - Deep Ocean Theme
     ui.add_head_html('''
         <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -252,9 +258,13 @@ def main_page():
     
     # Header
     with ui.header().classes('bg-transparent text-white'):
-        with ui.row().classes('items-center q-ml-md'):
-            ui.label('Diabetes Manager').classes('text-h6 font-bold text-cyan-400')
-            ui.label('v2.1 (Texture)').classes('text-xs text-cyan-200 q-ml-sm opacity-60')
+        with ui.row().classes('items-center justify-between w-full q-px-md'):
+            with ui.row().classes('items-center'):
+                ui.label('Diabetes Manager').classes('text-h6 font-bold text-cyan-400')
+                ui.label('v2.1 (Texture)').classes('text-xs text-cyan-200 q-ml-sm opacity-60')
+            
+            ui.button('Logout', icon='logout', on_click=lambda: (app.storage.user.clear(), ui.navigate.to('/login'))).props('flat dense color=cyan-200')
+
 
     # Tabs
     with ui.tabs().classes('w-full text-grey-400') as tabs:
@@ -386,7 +396,7 @@ def main_page():
                 ui.label('Context').classes('text-subtitle1 q-mt-md text-cyan-200 opacity-80')
                 with ui.grid(columns=2).classes('gap-4'):
                     activity_select = ui.select(
-                        ['None', 'Gym/Weights', 'Running', 'Swimming', 'Beach Tennis'], 
+                        ['None', 'Gym/Weights', 'Running', 'Swimming', 'Beach Tennis', 'Walking'], 
                         label='Activity', value='None'
                     ).classes('w-full mt-0 input-field').props('dark filled behavior=menu')
 
@@ -493,7 +503,7 @@ def main_page():
                 
                 with ui.row().classes('w-full items-center gap-4 q-mb-md'):
                      viz_activity = ui.select(
-                        ['Running', 'Swimming', 'Beach Tennis', 'Gym/Weights'], 
+                        ['Running', 'Swimming', 'Beach Tennis', 'Gym/Weights', 'Walking'], 
                         label='Select Activity', value='Running'
                     ).classes('w-64 input-field').props('dark filled behavior=menu')
                 
@@ -560,6 +570,7 @@ def main_page():
                     'mod_run': current_s.mod_run,
                     'mod_swim': current_s.mod_swim,
                     'mod_beach_tennis': current_s.mod_beach_tennis,
+                    'mod_walking': current_s.mod_walking,
                     'mod_stress': current_s.mod_stress,
                     'mod_anxious': current_s.mod_anxious
                 }
@@ -570,6 +581,14 @@ def main_page():
                     ui.number('Lunch', value=s_values['icr_lunch'], on_change=lambda e: s_values.update({'icr_lunch': e.value})).classes('input-field').props('dark filled')
                     ui.number('Dinner', value=s_values['icr_dinner'], on_change=lambda e: s_values.update({'icr_dinner': e.value})).classes('input-field').props('dark filled')
                     ui.number('Snack', value=s_values['icr_snack'], on_change=lambda e: s_values.update({'icr_snack': e.value})).classes('input-field').props('dark filled')
+
+                ui.label('Activity Modifiers').classes('text-subtitle2 q-mt-lg text-cyan-100')
+                with ui.grid(columns=2).classes('gap-4'):
+                    ui.number('Walking', value=s_values['mod_walking'], on_change=lambda e: s_values.update({'mod_walking': e.value})).classes('input-field').props('dark filled')
+                    ui.number('Running', value=s_values['mod_run'], on_change=lambda e: s_values.update({'mod_run': e.value})).classes('input-field').props('dark filled')
+                    ui.number('Gym', value=s_values['mod_gym'], on_change=lambda e: s_values.update({'mod_gym': e.value})).classes('input-field').props('dark filled')
+                    ui.number('Swim', value=s_values['mod_swim'], on_change=lambda e: s_values.update({'mod_swim': e.value})).classes('input-field').props('dark filled')
+                    ui.number('Beach Tennis', value=s_values['mod_beach_tennis'], on_change=lambda e: s_values.update({'mod_beach_tennis': e.value})).classes('input-field').props('dark filled')
 
                 ui.label('Personal Factors').classes('text-subtitle2 q-mt-lg text-cyan-100')
                 ui.number('Weight (kg)', value=s_values.get('weight', 70), on_change=lambda e: s_values.update({'weight': e.value})).classes('w-full input-field').props('dark filled')
@@ -746,6 +765,7 @@ if __name__ in {"__main__", "__mp_main__"}:
     
     ui.run(
         title='Diabetes App',
+        storage_secret='diabetes-manager-39485',
         native=is_native, # True locally, False on Render
         reload=False,
         port=port,

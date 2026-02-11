@@ -36,6 +36,7 @@ class InsulinCalculator:
             "Running": self.settings.mod_run,
             "Swimming": self.settings.mod_swim,
             "Beach Tennis": self.settings.mod_beach_tennis,
+            "Walking": self.settings.mod_walking,
             "None": 0.0
         }
         
@@ -47,6 +48,7 @@ class InsulinCalculator:
             "Running": 9.8, 
             "Swimming": 8.0,
             "Beach Tennis": 8.0, # Baseline Doubles
+            "Walking": 3.8, # Moderate
             "None": 1.0
         }
         
@@ -82,6 +84,15 @@ class InsulinCalculator:
                 intensity_note = " (Singles Match: High Intensity Reduction)"
             elif intensity == "Moderate":
                 intensity_note = " (Doubles Match: Sand Terrain)"
+        elif activity == "Walking":
+            if intensity == "Slow":
+                final_mets = 2.5
+                intensity_impact_factor = 0.8
+                intensity_note = " (Leisure Walk)"
+            elif intensity == "Fast":
+                final_mets = 5.0 # Power Walking
+                intensity_impact_factor = 1.2
+                intensity_note = " (Power Walking)"
         else:
              # Standard Logic
              if intensity == "Slow":
