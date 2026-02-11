@@ -516,9 +516,9 @@ def main_page():
                                 - Carbs: {res['carb_dose']:.2f} u
                                 - Correction: {res['correction_dose']:.2f} u
                             - **Modifiers**:
-                                - Activity: {res['activity_modifier']:.0%}
+                                - Activity: {res['activity_modifier']:.0%} {res['notes']}
                                 - Emotion: {res['emotion_modifier']:.0%}
-                                - *Final Used*: {res['final_modifier_used']:.0%} ({res['notes']})
+                                - *Final Used*: {res['final_modifier_used']:.0%}
                             - **Adjusted**: {res['adjusted_dose']:.2f} u
                             """)
                         
@@ -615,7 +615,9 @@ def main_page():
                     'mod_beach_tennis': current_s.mod_beach_tennis,
                     'mod_walking': current_s.mod_walking,
                     'mod_stress': current_s.mod_stress,
-                    'mod_anxious': current_s.mod_anxious
+                    'mod_anxious': current_s.mod_anxious,
+                    'height': current_s.height,
+                    'gender': current_s.gender
                 }
                 
                 ui.label('Insulin-to-Carb Ratios').classes('text-subtitle2 q-mt-sm text-emerald-700 dark:text-cyan-500')
@@ -634,7 +636,12 @@ def main_page():
                     ui.number('Beach Tennis', value=s_values['mod_beach_tennis'], on_change=lambda e: s_values.update({'mod_beach_tennis': e.value})).classes('input-field').props('filled')
 
                 ui.label('Personal Factors').classes('text-subtitle2 q-mt-lg text-emerald-700 dark:text-cyan-500')
-                ui.number('Weight (kg)', value=s_values.get('weight', 70), on_change=lambda e: s_values.update({'weight': e.value})).classes('w-full input-field').props('filled')
+                with ui.grid(columns=2).classes('gap-4'):
+                    ui.number('Weight (kg)', value=s_values.get('weight', 70), on_change=lambda e: s_values.update({'weight': e.value})).classes('input-field').props('filled')
+                    ui.number('Height (cm)', value=s_values.get('height', 170), on_change=lambda e: s_values.update({'height': e.value})).classes('input-field').props('filled')
+                
+                ui.select(['Male', 'Female'], label='Gender', value=s_values.get('gender', 'Male'), on_change=lambda e: s_values.update({'gender': e.value})).classes('w-full input-field').props('filled behavior=menu')
+
                 ui.number('ISF', value=s_values['isf'], on_change=lambda e: s_values.update({'isf': e.value})).classes('w-full input-field').props('filled')
                 ui.number('Target Glucose', value=s_values['target_glucose'], on_change=lambda e: s_values.update({'target_glucose': e.value})).classes('w-full input-field').props('filled')
                 ui.number('Correction Threshold', value=s_values['correction_threshold'], on_change=lambda e: s_values.update({'correction_threshold': e.value})).classes('w-full input-field').props('filled')

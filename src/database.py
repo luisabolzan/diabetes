@@ -27,6 +27,8 @@ class Settings(Base):
     
     # Personal Params
     weight = Column(Float, default=70.0) # kg
+    height = Column(Float, default=170.0) # cm
+    gender = Column(String, default='Male') # Male/Female
     
     # Dynamic Modifiers (Emotion)
     mod_stress = Column(Float, default=0.20)
@@ -125,6 +127,20 @@ def init_db():
         session.rollback()
         try:
             session.execute(text("ALTER TABLE settings ADD COLUMN mod_walking FLOAT DEFAULT -0.10"))
+            session.commit()
+            print("Migration successful.")
+        except Exception as e:
+            print(f"Migration failed: {e}")
+
+    # Auto-migration for 'height' and 'gender'
+    try:
+        session.execute(text("SELECT height FROM settings LIMIT 1"))
+    except Exception:
+        print("Migrating DB: Adding height and gender columns...")
+        session.rollback()
+        try:
+            session.execute(text("ALTER TABLE settings ADD COLUMN height FLOAT DEFAULT 170.0"))
+            session.execute(text("ALTER TABLE settings ADD COLUMN gender VARCHAR DEFAULT 'Male'"))
             session.commit()
             print("Migration successful.")
         except Exception as e:

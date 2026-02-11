@@ -85,14 +85,32 @@ class InsulinCalculator:
             elif intensity == "Moderate":
                 intensity_note = " (Doubles Match: Sand Terrain)"
         elif activity == "Walking":
+            # Time-Based Distance Logic
+            # S: 3.5, M: 5.0, F: 6.5 km/h
+            walk_speeds = {"Slow": 3.5, "Moderate": 5.0, "Fast": 6.5}
+            speed = walk_speeds.get(intensity, 5.0)
+            
+            hours = duration_minutes / 60.0
+            dist_km = speed * hours
+            
+            # Transport Cost Formula: 0.6 * Weight * Dist
+            energy_expended = 0.6 * user_weight * dist_km
+            
+            final_mets = 3.8 # Keep baseline MET for record/compatibility
+            if intensity == "Slow": final_mets = 2.5
+            elif intensity == "Fast": final_mets = 5.0
+                
+            intensity_impact_factor = 1.0 # Base
+            # Calculate impact based on standard logic or specific override?
+            # Let's keep the impact factor logic for insulin mod:
             if intensity == "Slow":
-                final_mets = 2.5
                 intensity_impact_factor = 0.8
-                intensity_note = " (Leisure Walk)"
+                intensity_note = f" (Leisure Walk ~{dist_km:.2f}km)"
             elif intensity == "Fast":
-                final_mets = 5.0 # Power Walking
                 intensity_impact_factor = 1.2
-                intensity_note = " (Power Walking)"
+                intensity_note = f" (Power Walking ~{dist_km:.2f}km)"
+            else:
+                 intensity_note = f" (Moderate Walk ~{dist_km:.2f}km)"
         else:
              # Standard Logic
              if intensity == "Slow":

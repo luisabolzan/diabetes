@@ -24,6 +24,18 @@ def login_page():
                 --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
                 --input-bg: #f9fafb;
             }
+            body.body--dark { 
+                /* Dark Mode (Deep Ocean) */
+                --bg-deep: #0f172a;
+                --text-main: #e2e8f0;
+                --text-sub: #94a3b8;
+                --primary-color: #2dd4bf; 
+                --primary-gradient: linear-gradient(135deg, #2dd4bf, #0d9488);
+                --glass-bg: rgba(30, 41, 59, 0.7);
+                --glass-border: rgba(255, 255, 255, 0.1);
+                --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+                --input-bg: rgba(255, 255, 255, 0.05);
+            }
             body { 
                 background-color: var(--bg-deep); 
                 color: var(--text-main);
@@ -95,13 +107,31 @@ def login_page():
         
         # Theme Switch (Login Page) - Top Right Absolute Position
         with ui.element('div').classes('absolute top-4 right-4'):
-             # Initialize Dark Mode based on Storage (Default True) - Same logic as main.py
-            dark_mode = ui.dark_mode()
-            if app.storage.user.get('dark_mode') is None:
-                app.storage.user['dark_mode'] = True 
-            dark_mode.bind_value(app.storage.user, 'dark_mode')
+            # Initialize Dark Mode based on Storage
+            is_dark = app.storage.user.get('dark_mode', True) # Default to Dark
             
-            ui.switch().bind_value(dark_mode).props('icon=dark_mode color=cyan-500 unchecked-icon=light_mode keep-color')
+            # Helper to toggle Class and UI state
+            def toggle_dark_mode(e):
+                val = e.value
+                app.storage.user['dark_mode'] = val
+                ui.dark_mode().value = val # Update Quasar internal state
+                if val:
+                    ui.run_javascript('document.body.classList.add("body--dark")')
+                    theme_switch.props('icon=dark_mode')
+                else:
+                    ui.run_javascript('document.body.classList.remove("body--dark")')
+                    theme_switch.props('icon=light_mode')
+
+            # Apply initial state (Need to run JS after page load, but this is server, so we send it now)
+            ui.dark_mode().value = is_dark
+            if is_dark:
+                 ui.run_javascript('document.body.classList.add("body--dark")')
+            else:
+                 ui.run_javascript('document.body.classList.remove("body--dark")')
+
+            theme_switch = ui.switch(value=is_dark, on_change=toggle_dark_mode).props('icon=dark_mode color=cyan-500 unchecked-icon=light_mode keep-color')
+            if not is_dark:
+                theme_switch.props('icon=light_mode')
 
         # --- LOGIN CARD ---
         with ui.card().classes('w-full max-w-sm glass-panel p-8 items-center'):
