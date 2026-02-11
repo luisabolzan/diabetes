@@ -288,9 +288,11 @@ def main_page():
                 ui.label('Diabetes Manager').classes('text-h6 font-bold text-emerald-500 dark:text-cyan-400')
                 ui.label('v2.3').classes('text-xs text-emerald-400 dark:text-cyan-200 q-ml-sm opacity-60')
             
-            with ui.row().classes('items-center gap-2'):
-                # Theme Switch
+            with ui.row().classes('items-center gap-4'):
+                # Theme Switch (Dark/Light Mode)
+                # Note: bind_value handles the state. No visual notification on change.
                 ui.switch().bind_value(dark_mode).props('icon=dark_mode color=cyan-500 unchecked-icon=light_mode keep-color')
+                
                 ui.button('Logout', icon='logout', on_click=lambda: (app.storage.user.clear(), ui.navigate.to('/login'))).props('flat dense color=grey')
 
 
