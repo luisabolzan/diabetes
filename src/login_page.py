@@ -8,53 +8,57 @@ def login_page():
         ui.navigate.to('/')
         return
 
-    # Styles matching main.py
+    # Styles matching main.py (Should be shared ideally, but replicating for now)
     ui.add_head_html('''
         <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
         <style>
-            :root {
-                --bg-deep: #0f172a;
-                --text-light: #e2e8f0;
-                --primary-cyan: #06b6d4;
-                --primary-blue: #3b82f6;
-                --glass-bg: rgba(30, 41, 59, 0.7);
-                --glass-border: rgba(255, 255, 255, 0.1);
+             :root {
+                /* Light Mode (Soft Grey) Default for Login Page */
+                --bg-deep: #f3f4f6;
+                --text-main: #1f2937;
+                --text-sub: #6b7280;
+                --primary-color: #10B981;
+                --primary-gradient: linear-gradient(135deg, #10B981, #059669);
+                --glass-bg: #ffffff;
+                --glass-border: rgba(0, 0, 0, 0.05);
+                --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+                --input-bg: #f9fafb;
             }
             body { 
                 background-color: var(--bg-deep); 
-                color: var(--text-light);
+                color: var(--text-main);
                 font-family: 'Inter', sans-serif;
                 margin: 0;
             }
             .glass-panel {
                 background: var(--glass-bg);
-                backdrop-filter: blur(12px);
-                -webkit-backdrop-filter: blur(12px);
+                /* No blurry effect needed for solid white, but kept for consistency if we switch to glass later */
                 border: 1px solid var(--glass-border);
-                box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-                border-radius: 16px;
+                box-shadow: var(--card-shadow);
+                border-radius: 20px;
             }
             .input-field .q-field__control {
-                background: rgba(255, 255, 255, 0.05) !important;
+                background: var(--input-bg) !important;
                 border-radius: 8px;
             }
             .input-field input {
-                color: white !important;
+                color: var(--text-main) !important;
             }
              .input-field .q-field__label {
-                color: #94a3b8;
+                color: var(--text-sub);
             }
             .action-btn {
-                background: linear-gradient(135deg, var(--primary-cyan), var(--primary-blue));
+                background: var(--primary-gradient);
                 color: white;
                 font-weight: 600;
                 border: none;
                 transition: all 0.3s ease;
-                box-shadow: 0 4px 15px rgba(6, 182, 212, 0.4);
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             }
             .action-btn:hover {
                 transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(6, 182, 212, 0.6);
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+                filter: brightness(1.1);
             }
         </style>
     ''')
@@ -91,20 +95,20 @@ def login_page():
         
         # --- LOGIN CARD ---
         with ui.card().classes('w-full max-w-sm glass-panel p-8 items-center'):
-            ui.label('Diabetes Manager').classes('text-h5 font-bold text-cyan-400 q-mb-xs')
+            ui.label('Diabetes Manager').classes('text-h5 font-bold text-emerald-600 q-mb-xs')
             ui.label('Login to continue').classes('text-sm text-gray-400 q-mb-lg')
             
             with ui.column().classes('w-full gap-4'):
-                email_input = ui.input('Email').classes('w-full input-field').props('dark filled')
+                email_input = ui.input('Email').classes('w-full input-field').props('filled')
                 
-                password_input = ui.input('Password', password=True, password_toggle_button=True).classes('w-full input-field').props('dark filled')
+                password_input = ui.input('Password', password=True, password_toggle_button=True).classes('w-full input-field').props('filled')
                 password_input.on('keydown.enter', try_login)
 
                 ui.button('LOGIN', on_click=try_login).classes('w-full action-btn q-mt-sm py-3 rounded-lg text-lg')
                 
                 with ui.row().classes('w-full justify-between items-center q-mt-sm px-2'):
-                    ui.button('Create Account', on_click=lambda: ui.navigate.to('/register')).classes('text-cyan-400 text-xs font-bold').props('flat capitalization=none')
-                    ui.button('Forgot Password?', on_click=open_forgot_password).classes('text-cyan-200 text-xs opacity-70 hover:opacity-100').props('flat capitalization=none')
+                    ui.button('Create Account', on_click=lambda: ui.navigate.to('/register')).classes('text-emerald-500 text-xs font-bold').props('flat capitalization=none')
+                    ui.button('Forgot Password?', on_click=open_forgot_password).classes('text-gray-500 text-xs opacity-70 hover:opacity-100').props('flat capitalization=none')
 
     # --- PASSWORD RESET DIALOG ---
     with ui.dialog() as reset_dialog, ui.card().classes('glass-panel p-6 w-full max-w-sm'):

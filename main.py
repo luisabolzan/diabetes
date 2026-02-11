@@ -200,70 +200,98 @@ def main_page():
         ui.navigate.to('/login')
         return
 
-    # Global Style - Deep Ocean Theme
+    # Global Style - Soft Grey (Light) & Deep Ocean (Dark)
     ui.add_head_html('''
         <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
         <style>
             :root {
+                /* Light Mode (Soft Grey) */
+                --bg-deep: #f3f4f6;
+                --text-main: #1f2937; /* Gray-800 */
+                --text-sub: #6b7280; /* Gray-500 */
+                --primary-color: #10B981; /* Emerald-500 */
+                --primary-gradient: linear-gradient(135deg, #10B981, #059669);
+                --glass-bg: #ffffff;
+                --glass-border: rgba(0, 0, 0, 0.05);
+                --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Shadow-LG */
+                --input-bg: #f9fafb; /* Gray-50 */
+            }
+            body.body--dark { 
+                /* Dark Mode (Deep Ocean) */
                 --bg-deep: #0f172a;
-                --text-light: #e2e8f0;
-                --primary-cyan: #06b6d4;
-                --primary-blue: #3b82f6;
+                --text-main: #e2e8f0;
+                --text-sub: #94a3b8;
+                --primary-color: #2dd4bf; /* Teal-400 (Brighter for Dark Mode) */
+                --primary-gradient: linear-gradient(135deg, #2dd4bf, #0d9488);
                 --glass-bg: rgba(30, 41, 59, 0.7);
                 --glass-border: rgba(255, 255, 255, 0.1);
+                --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+                --input-bg: rgba(255, 255, 255, 0.05);
             }
             body { 
                 background-color: var(--bg-deep); 
-                color: var(--text-light);
+                color: var(--text-main);
                 font-family: 'Inter', sans-serif;
+                transition: background-color 0.3s ease, color 0.3s ease;
             }
             .glass-panel {
                 background: var(--glass-bg);
                 backdrop-filter: blur(12px);
                 -webkit-backdrop-filter: blur(12px);
                 border: 1px solid var(--glass-border);
-                box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+                box-shadow: var(--card-shadow);
                 border-radius: 16px;
+                transition: background 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
             }
             .action-btn {
-                background: linear-gradient(135deg, var(--primary-cyan), var(--primary-blue));
+                background: var(--primary-gradient);
                 color: white;
                 font-weight: 600;
                 border: none;
                 transition: all 0.3s ease;
-                box-shadow: 0 4px 15px rgba(6, 182, 212, 0.4);
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             }
             .action-btn:hover {
                 transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(6, 182, 212, 0.6);
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+                filter: brightness(1.1);
             }
             .input-field .q-field__control {
-                background: rgba(255, 255, 255, 0.05) !important;
+                background: var(--input-bg) !important;
                 border-radius: 8px;
             }
             .input-field .q-field__label {
-                color: #94a3b8;
+                color: var(--text-sub);
             }
             .input-field input, .input-field .q-select__content {
-                color: white !important;
+                color: var(--text-main) !important;
             }
             .q-tab {
-                color: #94a3b8;
+                color: var(--text-sub);
             }
             .q-tab--active {
-                color: var(--primary-cyan);
+                color: var(--primary-color);
             }
         </style>
     ''')
     
+    # Initialize Dark Mode based on Storage (Default True)
+    dark_mode = ui.dark_mode()
+    if app.storage.user.get('dark_mode') is None:
+        app.storage.user['dark_mode'] = True # Default to Dark
+    dark_mode.bind_value(app.storage.user, 'dark_mode')
+
     # Header
-    with ui.header().classes('bg-transparent text-white'):
+    with ui.header().classes('bg-transparent'):
         with ui.row().classes('items-center justify-between w-full q-px-md'):
             with ui.row().classes('items-center'):
-                ui.label('Diabetes Manager').classes('text-h6 font-bold text-cyan-400')
-                ui.label('v2.1 (Texture)').classes('text-xs text-cyan-200 q-ml-sm opacity-60')
+                ui.label('Diabetes Manager').classes('text-h6 font-bold text-emerald-500 dark:text-cyan-400')
+                ui.label('v2.3').classes('text-xs text-emerald-400 dark:text-cyan-200 q-ml-sm opacity-60')
             
-            ui.button('Logout', icon='logout', on_click=lambda: (app.storage.user.clear(), ui.navigate.to('/login'))).props('flat dense color=cyan-200')
+            with ui.row().classes('items-center gap-2'):
+                # Theme Switch
+                ui.switch().bind_value(dark_mode).props('icon=dark_mode color=cyan-500 unchecked-icon=light_mode keep-color')
+                ui.button('Logout', icon='logout', on_click=lambda: (app.storage.user.clear(), ui.navigate.to('/login'))).props('flat dense color=grey')
 
 
     # Tabs
@@ -303,20 +331,29 @@ def main_page():
                 ui.label('Bolus Calculator').classes('text-h5 q-mb-lg text-cyan-300 font-bold text-center')
                 
                 with ui.grid(columns=3).classes('w-full gap-4'):
-                    glucose_input = ui.number(label='Current Glucose', value=120, format='%.0f').classes('w-full input-field').props('dark filled')
-                    carbs_input = ui.number(label='Carbs (g)', value=0, format='%.0f').classes('w-full input-field').props('dark filled')
-                    kcal_input = ui.number(label='Calories', value=0, format='%.0f').classes('w-full input-field').props('dark filled')
+                    glucose_input = ui.number(label='Current Glucose', value=120, format='%.0f').classes('w-full input-field').props('filled')
+                    carbs_input = ui.number(label='Carbs (g)', value=0, format='%.0f').classes('w-full input-field').props('filled')
+                    kcal_input = ui.number(label='Calories', value=0, format='%.0f').classes('w-full input-field').props('filled')
                 
                 # Manual Override Input
-                last_dose_input = ui.number(label='Time Since Last Dose (min)', value=180, format='%.0f', on_change=lambda: update_live_status()).classes('w-full input-field q-mt-md').props('dark filled')
-                # Initialize status
+                last_dose_input = ui.number(label='Time Since Last Dose (min)', value=180, format='%.0f', on_change=lambda: update_live_status()).classes('w-full input-field q-mt-md').props('filled')
+                # Initial Status
                 update_live_status()
+                
+                def reset_inputs():
+                    glucose_input.value = 120
+                    carbs_input.value = 0
+                    kcal_input.value = 0
+                    last_dose_input.value = 180
+                    ui.notify('Inputs Reset', type='info')
+                
+                ui.button('Reset Inputs', icon='refresh', on_click=reset_inputs).classes('w-full q-mt-sm bg-grey-800 text-grey-400').props('flat dense')
                 
                 # --- MEAL BUILDER ---
                 with ui.dialog() as food_dialog, ui.card().classes('w-full max-w-4xl glass-panel p-6'):
-                    ui.label('Meal Builder').classes('text-h5 text-cyan-300 font-bold q-mb-md')
+                    ui.label('Meal Builder').classes('text-h5 text-cyan-500 font-bold q-mb-md')
                     
-                    plate_container = ui.column().classes('w-full bg-black/20 p-4 rounded-lg q-mb-md')
+                    plate_container = ui.column().classes('w-full bg-grey-500/10 p-4 rounded-lg q-mb-md')
                     plate_items = []
                     
                     def add_to_plate(val):
@@ -358,13 +395,13 @@ def main_page():
                         total_carbs = sum(f.carbs for f in plate_items)
                         total_kcal = sum(f.kcal for f in plate_items)
                         with plate_container:
-                            ui.label(f'Virtual Plate (Total: {total_carbs:.1f}g CHO | {total_kcal} Kcal)').classes('text-lg text-green-400 font-bold q-mb-sm')
+                            ui.label(f'Virtual Plate (Total: {total_carbs:.1f}g CHO | {total_kcal} Kcal)').classes('text-lg text-green-500 font-bold q-mb-sm')
                             with ui.scroll_area().classes('h-32 w-full'):
                                 for i, f in enumerate(plate_items):
-                                    with ui.row().classes('w-full items-center justify-between q-py-xs border-b border-white/5'):
-                                        ui.label(f"{f.name} ({f.measure})").classes('text-sm text-grey-300')
+                                    with ui.row().classes('w-full items-center justify-between q-py-xs border-b border-grey-500/20'):
+                                        ui.label(f"{f.name} ({f.measure})").classes('text-sm text-grey-500')
                                         with ui.row().classes('items-center gap-2'):
-                                            ui.label(f"{f.carbs}g | {f.kcal} Kcal").classes('text-sm font-bold text-white')
+                                            ui.label(f"{f.carbs}g | {f.kcal} Kcal").classes('text-sm font-bold')
                                             ui.button(icon='delete', on_click=lambda idx=i: remove_from_plate(idx)).props('flat dense round text-color=red-400 size=sm')
 
                     options = get_all_food_options()
@@ -375,7 +412,7 @@ def main_page():
                             with_input=True, 
                             label='Search food',
                             on_change=lambda e: add_to_plate(e.value) if e.value else None
-                        ).classes('w-full input-field').props('dark filled use-input behavior=menu')
+                        ).classes('w-full input-field').props('filled use-input behavior=menu')
 
                     def confirm_meal():
                         total_c = sum(f.carbs for f in plate_items)
@@ -391,26 +428,26 @@ def main_page():
                     
                     update_plate()
 
-                ui.button('Open Meal Builder', icon='restaurant_menu', on_click=food_dialog.open).classes('w-full q-mt-sm bg-purple-900/50 text-purple-200 border border-purple-500/30 hover:bg-purple-800/50').props('flat')
+                ui.button('Open Meal Builder', icon='restaurant_menu', on_click=food_dialog.open).classes('w-full q-mt-sm bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200 border border-purple-500/30 hover:bg-purple-200 dark:hover:bg-purple-800/50').props('flat')
                 
-                ui.label('Context').classes('text-subtitle1 q-mt-md text-cyan-200 opacity-80')
+                ui.label('Context').classes('text-subtitle1 q-mt-md text-cyan-500 opacity-80')
                 with ui.grid(columns=2).classes('gap-4'):
                     activity_select = ui.select(
                         ['None', 'Gym/Weights', 'Running', 'Swimming', 'Beach Tennis', 'Walking'], 
                         label='Activity', value='None'
-                    ).classes('w-full mt-0 input-field').props('dark filled behavior=menu')
+                    ).classes('w-full mt-0 input-field').props('filled behavior=menu')
 
-                    duration_input = ui.number(label='Duration (min)', value=30, format='%.0f').classes('w-full input-field').props('dark filled')
+                    duration_input = ui.number(label='Duration (min)', value=30, format='%.0f').classes('w-full input-field').props('filled')
                 
                 intensity_select = ui.select(
                     ['Slow', 'Moderate', 'Fast'],
                     label='Intensity (Speed/Effort)', value='Moderate'
-                ).classes('w-full q-mt-sm input-field').props('dark filled behavior=menu')
+                ).classes('w-full q-mt-sm input-field').props('filled behavior=menu')
                 
                 emotion_select = ui.select(
                     ['Calm', 'Stress', 'Anxious'], 
                     label='Emotion', value='Calm'
-                ).classes('w-full q-mt-sm input-field').props('dark filled behavior=menu')
+                ).classes('w-full q-mt-sm input-field').props('filled behavior=menu')
 
                 result_area = ui.column().classes('w-full q-mt-lg hidden')
                 
@@ -447,28 +484,28 @@ def main_page():
                                 with ui.row().classes('bg-red-500/20 border border-red-500 rounded-full px-4 py-1 items-center gap-2'):
                                     ui.icon('warning', color='red-400')
                                     ui.label('PEAK ACTION').classes('text-red-400 font-bold')
-                            ui.label('Exercise Risk: HIGH').classes('text-center text-red-300 text-xs q-mt-xs font-bold uppercase tracking-widest w-full')
+                            ui.label('Exercise Risk: HIGH').classes('text-center text-red-500 text-xs q-mt-xs font-bold uppercase tracking-widest w-full')
                         else:
                             with ui.row().classes('w-full justify-center q-mt-md'):
                                 with ui.row().classes('bg-green-500/20 border border-green-500 rounded-full px-4 py-1 items-center gap-2'):
                                     ui.icon('check_circle', color='green-400')
-                                    ui.label('SAFE TAIL').classes('text-green-400 font-bold')
-                            ui.label('Exercise Risk: LOW').classes('text-center text-green-300 text-xs q-mt-xs font-bold uppercase tracking-widest w-full')
+                                    ui.label('SAFE TAIL').classes('text-green-500 font-bold')
+                            ui.label('Exercise Risk: LOW').classes('text-center text-green-500 text-xs q-mt-xs font-bold uppercase tracking-widest w-full')
 
                         if res.get('energy_expended', 0) > 0:
-                            ui.label(f"Est. Burn: ~{res['energy_expended']} Kcal ({res['mets']} METs)").classes('w-full text-center text-xs text-yellow-300 font-bold q-mt-sm')
+                            ui.label(f"Est. Burn: ~{res['energy_expended']} Kcal ({res['mets']} METs)").classes('w-full text-center text-xs text-yellow-600 dark:text-yellow-300 font-bold q-mt-sm')
 
                         if res.get('carb_refuel_msg'):
                              with ui.row().classes('w-full justify-center q-mt-md'):
                                 with ui.row().classes('bg-orange-500/20 border border-orange-500 rounded-lg px-4 py-2 items-center gap-2'):
                                     ui.icon('restaurant', color='orange-400')
-                                    ui.label(res['carb_refuel_msg']).classes('text-orange-300 font-bold text-sm')
+                                    ui.label(res['carb_refuel_msg']).classes('text-orange-500 font-bold text-sm')
 
                         with ui.row().classes('w-full justify-center q-my-md'):
-                             ui.label(f"{res['recommended_dose']} units").classes('text-6xl text-cyan-400 font-black drop-shadow-lg')
-                        ui.label("Recommended Dose").classes('text-center text-grey-400 text-sm uppercase tracking-widest w-full')
+                             ui.label(f"{res['recommended_dose']} units").classes('text-6xl text-emerald-500 dark:text-cyan-400 font-black drop-shadow-lg')
+                        ui.label("Recommended Dose").classes('text-center text-gray-500 dark:text-grey-400 text-sm uppercase tracking-widest w-full')
                         
-                        with ui.expansion('Calculation Details', icon='info').classes('w-full text-grey-300 q-mt-md input-field rounded-lg').props('dark'):
+                        with ui.expansion('Calculation Details', icon='info').classes('w-full text-gray-500 dark:text-grey-300 q-mt-md input-field rounded-lg').props('filled'):
                             ui.markdown(f"""
                             - **Gross Dose**: {res['gross_dose']:.2f} u
                                 - Carbs: {res['carb_dose']:.2f} u
@@ -478,7 +515,7 @@ def main_page():
                                 - Emotion: {res['emotion_modifier']:.0%}
                                 - *Final Used*: {res['final_modifier_used']:.0%} ({res['notes']})
                             - **Adjusted**: {res['adjusted_dose']:.2f} u
-                            """).classes('text-grey-300')
+                            """)
                         
                         log_entry = {
                             "glucose": g,
@@ -490,7 +527,7 @@ def main_page():
                             "timestamp": datetime.now()
                         }
                         
-                        ui.button('Save to History', icon='save', on_click=lambda: save_log(log_entry)).classes('w-full q-mt-md bg-cyan-900 text-cyan-100 hover:bg-cyan-800').props('flat')
+                        ui.button('Save to History', icon='save', on_click=lambda: save_log(log_entry)).classes('w-full q-mt-md bg-emerald-600 dark:bg-cyan-600 text-white hover:bg-emerald-700 dark:hover:bg-cyan-700').props('flat')
 
                 ui.button('CALCULATE', on_click=on_calculate).classes('w-full q-mt-xl action-btn py-3 text-lg rounded-xl')
                 
@@ -499,13 +536,13 @@ def main_page():
         # --- INSIGHTS TAB ---
         with ui.tab_panel(insights_tab):
             with ui.card().classes('w-full max-w-4xl mx-auto p-6 glass-panel no-shadow h-full'):
-                ui.label('Activity Impact Analysis').classes('text-h5 text-cyan-300 font-bold q-mb-md')
+                ui.label('Activity Impact Analysis').classes('text-h5 text-emerald-600 dark:text-cyan-500 font-bold q-mb-md')
                 
                 with ui.row().classes('w-full items-center gap-4 q-mb-md'):
                      viz_activity = ui.select(
                         ['Running', 'Swimming', 'Beach Tennis', 'Gym/Weights', 'Walking'], 
                         label='Select Activity', value='Running'
-                    ).classes('w-64 input-field').props('dark filled behavior=menu')
+                    ).classes('w-64 input-field').props('filled behavior=menu')
                 
                 chart_container = ui.element('div').classes('w-full h-96')
                 
@@ -528,16 +565,17 @@ def main_page():
                          series_mod.append(round(r_mod['modifier'] * 100, 1))
                          series_fast.append(round(r_fast['modifier'] * 100, 1))
                      with chart_container:
+                         # Chart needs dynamic colors too, but for now focus is main UI
                          ui.echart({
                             'tooltip': {'trigger': 'axis'},
-                            'legend': {'textStyle': {'color': '#ccc'}},
+                            'legend': {'textStyle': {'color': '#94a3b8'}},
                             'xAxis': {
                                 'type': 'category', 'data': durations, 'name': 'Min',
-                                'axisLine': {'lineStyle': {'color': '#ccc'}}
+                                'axisLine': {'lineStyle': {'color': '#94a3b8'}}
                             },
                             'yAxis': {
                                 'type': 'value', 'name': '%',
-                                'axisLine': {'lineStyle': {'color': '#ccc'}},
+                                'axisLine': {'lineStyle': {'color': '#94a3b8'}},
                                 'splitLine': {'lineStyle': {'color': '#333'}}
                             },
                             'series': [
@@ -555,7 +593,7 @@ def main_page():
         with ui.tab_panel(settings_tab):
             current_s = get_settings()
             with ui.card().classes('w-full max-w-lg mx-auto p-6 glass-panel no-shadow'):
-                ui.label('Configuration').classes('text-h5 q-mb-lg text-cyan-300 font-bold')
+                ui.label('Configuration').classes('text-h5 q-mb-lg text-emerald-600 dark:text-cyan-500 font-bold')
                 
                 s_values = {
                     'icr_breakfast': current_s.icr_breakfast,
@@ -575,26 +613,26 @@ def main_page():
                     'mod_anxious': current_s.mod_anxious
                 }
                 
-                ui.label('Insulin-to-Carb Ratios').classes('text-subtitle2 q-mt-sm text-cyan-100')
+                ui.label('Insulin-to-Carb Ratios').classes('text-subtitle2 q-mt-sm text-emerald-500 dark:text-cyan-500')
                 with ui.grid(columns=2).classes('gap-4'):
-                    ui.number('Breakfast', value=s_values['icr_breakfast'], on_change=lambda e: s_values.update({'icr_breakfast': e.value})).classes('input-field').props('dark filled')
-                    ui.number('Lunch', value=s_values['icr_lunch'], on_change=lambda e: s_values.update({'icr_lunch': e.value})).classes('input-field').props('dark filled')
-                    ui.number('Dinner', value=s_values['icr_dinner'], on_change=lambda e: s_values.update({'icr_dinner': e.value})).classes('input-field').props('dark filled')
-                    ui.number('Snack', value=s_values['icr_snack'], on_change=lambda e: s_values.update({'icr_snack': e.value})).classes('input-field').props('dark filled')
+                    ui.number('Breakfast', value=s_values['icr_breakfast'], on_change=lambda e: s_values.update({'icr_breakfast': e.value})).classes('input-field').props('filled')
+                    ui.number('Lunch', value=s_values['icr_lunch'], on_change=lambda e: s_values.update({'icr_lunch': e.value})).classes('input-field').props('filled')
+                    ui.number('Dinner', value=s_values['icr_dinner'], on_change=lambda e: s_values.update({'icr_dinner': e.value})).classes('input-field').props('filled')
+                    ui.number('Snack', value=s_values['icr_snack'], on_change=lambda e: s_values.update({'icr_snack': e.value})).classes('input-field').props('filled')
 
-                ui.label('Activity Modifiers').classes('text-subtitle2 q-mt-lg text-cyan-100')
+                ui.label('Activity Modifiers').classes('text-subtitle2 q-mt-lg text-emerald-500 dark:text-cyan-500')
                 with ui.grid(columns=2).classes('gap-4'):
-                    ui.number('Walking', value=s_values['mod_walking'], on_change=lambda e: s_values.update({'mod_walking': e.value})).classes('input-field').props('dark filled')
-                    ui.number('Running', value=s_values['mod_run'], on_change=lambda e: s_values.update({'mod_run': e.value})).classes('input-field').props('dark filled')
-                    ui.number('Gym', value=s_values['mod_gym'], on_change=lambda e: s_values.update({'mod_gym': e.value})).classes('input-field').props('dark filled')
-                    ui.number('Swim', value=s_values['mod_swim'], on_change=lambda e: s_values.update({'mod_swim': e.value})).classes('input-field').props('dark filled')
-                    ui.number('Beach Tennis', value=s_values['mod_beach_tennis'], on_change=lambda e: s_values.update({'mod_beach_tennis': e.value})).classes('input-field').props('dark filled')
+                    ui.number('Walking', value=s_values['mod_walking'], on_change=lambda e: s_values.update({'mod_walking': e.value})).classes('input-field').props('filled')
+                    ui.number('Running', value=s_values['mod_run'], on_change=lambda e: s_values.update({'mod_run': e.value})).classes('input-field').props('filled')
+                    ui.number('Gym', value=s_values['mod_gym'], on_change=lambda e: s_values.update({'mod_gym': e.value})).classes('input-field').props('filled')
+                    ui.number('Swim', value=s_values['mod_swim'], on_change=lambda e: s_values.update({'mod_swim': e.value})).classes('input-field').props('filled')
+                    ui.number('Beach Tennis', value=s_values['mod_beach_tennis'], on_change=lambda e: s_values.update({'mod_beach_tennis': e.value})).classes('input-field').props('filled')
 
-                ui.label('Personal Factors').classes('text-subtitle2 q-mt-lg text-cyan-100')
-                ui.number('Weight (kg)', value=s_values.get('weight', 70), on_change=lambda e: s_values.update({'weight': e.value})).classes('w-full input-field').props('dark filled')
-                ui.number('ISF', value=s_values['isf'], on_change=lambda e: s_values.update({'isf': e.value})).classes('w-full input-field').props('dark filled')
-                ui.number('Target Glucose', value=s_values['target_glucose'], on_change=lambda e: s_values.update({'target_glucose': e.value})).classes('w-full input-field').props('dark filled')
-                ui.number('Correction Threshold', value=s_values['correction_threshold'], on_change=lambda e: s_values.update({'correction_threshold': e.value})).classes('w-full input-field').props('dark filled')
+                ui.label('Personal Factors').classes('text-subtitle2 q-mt-lg text-emerald-500 dark:text-cyan-500')
+                ui.number('Weight (kg)', value=s_values.get('weight', 70), on_change=lambda e: s_values.update({'weight': e.value})).classes('w-full input-field').props('filled')
+                ui.number('ISF', value=s_values['isf'], on_change=lambda e: s_values.update({'isf': e.value})).classes('w-full input-field').props('filled')
+                ui.number('Target Glucose', value=s_values['target_glucose'], on_change=lambda e: s_values.update({'target_glucose': e.value})).classes('w-full input-field').props('filled')
+                ui.number('Correction Threshold', value=s_values['correction_threshold'], on_change=lambda e: s_values.update({'correction_threshold': e.value})).classes('w-full input-field').props('filled')
 
                 ui.button('Save Settings', on_click=lambda: save_settings(s_values)).classes('w-full q-mt-xl action-btn py-2')
 
@@ -606,6 +644,11 @@ def main_page():
                     ui.button(icon='refresh', on_click=lambda: refresh_history()).props('flat round dense text-color=cyan-400')
                     ui.button('Export', icon='download', on_click=export_logs).classes('bg-cyan-900 text-cyan-100').props('flat dense')
             
+            # Define helper first (referencing container that will be created below? No, must create container first)
+            # Actually, scoping: create container, then function.
+            
+            history_container = ui.column().classes('w-full') # Fix: Create container
+
             def refresh_history():
                 history_container.clear()
                 logs = get_logs()
@@ -633,7 +676,12 @@ def main_page():
                                     with ui.menu().props('dark'):
                                         ui.menu_item('Hypo (Low)', on_click=lambda id=l.id: [save_feedback(id, 'Hypo'), refresh_history()])
                                         ui.menu_item('Perfect', on_click=lambda id=l.id: [save_feedback(id, 'Perfect'), refresh_history()])
+                                        ui.menu_item('Hypo (Low)', on_click=lambda id=l.id: [save_feedback(id, 'Hypo'), refresh_history()])
+                                        ui.menu_item('Perfect', on_click=lambda id=l.id: [save_feedback(id, 'Perfect'), refresh_history()])
                                         ui.menu_item('Hyper (High)', on_click=lambda id=l.id: [save_feedback(id, 'Hyper'), refresh_history()])
+            
+            # Load initially
+            refresh_history()
 
     # --- SCAN FOOD ---
     if HAS_TORCH:
@@ -713,9 +761,13 @@ def main_page():
             # We use io_bound (thread pool) because sharing the 'model' object across processes 
             # (cpu_bound) causes pickling errors with PyTorch.
             pred_carbs = await run.io_bound(predict_bytes, model, scan_state['image_bytes'])
-                
-            carbs_input.value = round(pred_carbs)
-            ui.notify(f"Prediction: {pred_carbs:.1f}g Carbs", type='positive', color='green')
+            
+            # Feature: Accumulate Carbs
+            current_carbs = carbs_input.value or 0
+            new_total = current_carbs + round(pred_carbs)
+            carbs_input.value = new_total
+            
+            ui.notify(f"Added {pred_carbs:.1f}g Carbs (Total: {new_total}g)", type='positive', color='green')
             scan_dialog.close()
             
             scan_state['image_bytes'] = None
@@ -736,18 +788,10 @@ def main_page():
         
         with ui.column().classes('w-full gap-4'):
             ui.upload(
-                label='Take Photo', 
+                label='Upload Image', 
                 auto_upload=True,
                 on_upload=handle_scan_upload
-            ).props('accept="image/*" capture="environment" color=cyan-500 flat bordered class="full-width"')
-            
-            ui.label('OR').classes('text-center text-xs font-bold text-grey-600')
-            
-            ui.upload(
-                label='Choose from Gallery', 
-                auto_upload=True,
-                on_upload=handle_scan_upload
-            ).props('accept="image/*" color=purple-400 flat bordered class="full-width"')
+            ).props('accept="image/*" color=cyan-500 flat bordered class="full-width"')
             
             analyze_btn = ui.button('ANALYZE & COUNT', on_click=analyze_image).classes('w-full bg-gradient-to-r from-green-400 to-cyan-500 text-white font-bold q-mt-md')
             analyze_btn.disable()
