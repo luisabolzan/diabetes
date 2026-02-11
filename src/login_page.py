@@ -91,12 +91,22 @@ def login_page():
         else:
              ui.notify(msg, type='negative')
 
-    with ui.column().classes('w-full h-screen items-center justify-center p-4'):
+    with ui.column().classes('w-full h-screen items-center justify-center p-4 relative-position'):
         
+        # Theme Switch (Login Page) - Top Right Absolute Position
+        with ui.element('div').classes('absolute top-4 right-4'):
+             # Initialize Dark Mode based on Storage (Default True) - Same logic as main.py
+            dark_mode = ui.dark_mode()
+            if app.storage.user.get('dark_mode') is None:
+                app.storage.user['dark_mode'] = True 
+            dark_mode.bind_value(app.storage.user, 'dark_mode')
+            
+            ui.switch().bind_value(dark_mode).props('icon=dark_mode color=cyan-500 unchecked-icon=light_mode keep-color')
+
         # --- LOGIN CARD ---
         with ui.card().classes('w-full max-w-sm glass-panel p-8 items-center'):
-            ui.label('Diabetes Manager').classes('text-h5 font-bold text-emerald-600 q-mb-xs')
-            ui.label('Login to continue').classes('text-sm text-gray-400 q-mb-lg')
+            ui.label('Diabetes Manager').classes('text-h5 font-bold text-emerald-600 dark:text-cyan-400 q-mb-xs')
+            ui.label('Login to continue').classes('text-sm text-gray-500 dark:text-gray-400 q-mb-lg')
             
             with ui.column().classes('w-full gap-4'):
                 email_input = ui.input('Email').classes('w-full input-field').props('filled')
@@ -107,7 +117,7 @@ def login_page():
                 ui.button('LOGIN', on_click=try_login).classes('w-full action-btn q-mt-sm py-3 rounded-lg text-lg')
                 
                 with ui.row().classes('w-full justify-between items-center q-mt-sm px-2'):
-                    ui.button('Create Account', on_click=lambda: ui.navigate.to('/register')).classes('text-emerald-500 text-xs font-bold').props('flat capitalization=none')
+                    ui.button('Create Account', on_click=lambda: ui.navigate.to('/register')).classes('text-emerald-600 dark:text-cyan-400 text-xs font-bold').props('flat capitalization=none')
                     ui.button('Forgot Password?', on_click=open_forgot_password).classes('text-gray-500 text-xs opacity-70 hover:opacity-100').props('flat capitalization=none')
 
     # --- PASSWORD RESET DIALOG ---
