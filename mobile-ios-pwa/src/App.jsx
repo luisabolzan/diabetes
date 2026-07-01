@@ -59,6 +59,7 @@ function App() {
     target_glucose: 90,
     correction_threshold: 120,
     weight: 70.0,
+    gender: 'Neutral',
     mod_gym: 0.10,
     mod_run: -0.30,
     mod_swim: -0.30,

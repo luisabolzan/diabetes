@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine, Column, Integer, Float, String, DateTime, ForeignKey
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from datetime import datetime
+import os
 
 # Define the base
 Base = declarative_base()
@@ -28,11 +29,9 @@ class Settings(Base):
     # Personal Params
     weight = Column(Float, default=70.0) # kg
     height = Column(Float, default=170.0) # cm
-    gender = Column(String, default='Male') # Male/Female
+    gender = Column(String, default='Neutral') # Male/Female/Neutral
     
-    # Dynamic Modifiers (Emotion)
-    mod_stress = Column(Float, default=0.20)
-    mod_anxious = Column(Float, default=0.10)
+
 
 class Log(Base):
     __tablename__ = 'logs'
@@ -42,14 +41,14 @@ class Log(Base):
     glucose = Column(Integer)
     carbs = Column(Integer)
     activity = Column(String)
-    emotion = Column(String)
+
     recommended_dose = Column(Float)
     actual_dose = Column(Float)
     
     # Relationship to feedback
     feedback = relationship("Feedback", uselist=False, back_populates="log")
     # Relationship to adjustments
-    adjustments = relationship("Adjustment", back_populates="log")
+    adjustments = relationship("Adjustment", back_populates="log", cascade="all, delete-orphan")
 
 class Feedback(Base):
     __tablename__ = 'feedback'
@@ -94,6 +93,7 @@ class User(Base):
 
 # Database Setup
 DATABASE_URL = "sqlite:///./data/diabetes.db"
+os.makedirs("./data", exist_ok=True)
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -132,15 +132,27 @@ def init_db():
         except Exception as e:
             print(f"Migration failed: {e}")
 
-    # Auto-migration for 'height' and 'gender'
+    # Auto-migration for 'height'
     try:
         session.execute(text("SELECT height FROM settings LIMIT 1"))
     except Exception:
-        print("Migrating DB: Adding height and gender columns...")
+        print("Migrating DB: Adding height column...")
         session.rollback()
         try:
             session.execute(text("ALTER TABLE settings ADD COLUMN height FLOAT DEFAULT 170.0"))
-            session.execute(text("ALTER TABLE settings ADD COLUMN gender VARCHAR DEFAULT 'Male'"))
+            session.commit()
+            print("Migration successful.")
+        except Exception as e:
+            print(f"Migration failed: {e}")
+
+    # Auto-migration for 'gender'
+    try:
+        session.execute(text("SELECT gender FROM settings LIMIT 1"))
+    except Exception:
+        print("Migrating DB: Adding gender column...")
+        session.rollback()
+        try:
+            session.execute(text("ALTER TABLE settings ADD COLUMN gender VARCHAR DEFAULT 'Neutral'"))
             session.commit()
             print("Migration successful.")
         except Exception as e:

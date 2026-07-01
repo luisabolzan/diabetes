@@ -24,6 +24,18 @@ export const SettingsView = ({ settings, setSettings }) => {
             <Card className="mb-6">
                 <h3 className="text-lg font-semibold text-slate-200 mb-4 border-b border-slate-700 pb-2">Personal Factors</h3>
                 <Input label="Weight (kg)" value={settings.weight} onChange={v => handleChange('weight', v)} />
+                <div className="mb-4">
+                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 px-1">Gender</label>
+                    <select
+                        value={settings.gender || 'Neutral'}
+                        onChange={e => setSettings(prev => ({ ...prev, gender: e.target.value }))}
+                        className="w-full bg-slate-800 border border-slate-700 rounded-lg py-3 px-4 text-slate-200 focus:outline-none focus:border-cyan-500 transition-colors"
+                    >
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Neutral">Neutral</option>
+                    </select>
+                </div>
                 <Input label="ISF (1u drops X mg/dL)" value={settings.isf} onChange={v => handleChange('isf', v)} />
                 <Input label="Target Glucose (mg/dL)" value={settings.target_glucose} onChange={v => handleChange('target_glucose', v)} />
                 <Input label="Correction Threshold (mg/dL)" value={settings.correction_threshold} onChange={v => handleChange('correction_threshold', v)} />

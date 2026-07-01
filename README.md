@@ -1,40 +1,48 @@
-
-# ANTIGRAVITY
-### Type 1 Diabetes Management & Adaptive Bolus Calculator
+# ANTIGRAVITY: Hybrid Vision Bolus Calculator
 
 ![Python](https://img.shields.io/badge/Python-3.12-blue?style=for-the-badge&logo=python) ![NiceGUI](https://img.shields.io/badge/UI-NiceGUI-orange?style=for-the-badge) ![Status](https://img.shields.io/badge/Status-Experimental-red?style=for-the-badge)
 
 ## About
-**Antigravity** is a next-generation bolus calculator designed for Type 1 Diabetics seeking precision control. Unlike standard calculators that rely on static ratios, Antigravity uses a **context-aware engine** that adapts to your biology in real-time. By integrating physical activity, emotional state, and dynamic feedback loops, it attempts to "defy" the unpredictability of blood glucose.
+**Antigravity** is an advanced, context-aware insulin calculator for Type 1 Diabetics, specifically engineered to solve the "invisible food" problem in computer vision. It combines a **Deep Learning semantic layer** (ResNet18) with a **Classic CV texture layer** to accurately estimate carbohydrate content in low-contrast meals (e.g., white rice on white plates) that standard AI models often miss.
+
+Beyond vision, it features a safety-first "Peak Window" logic that prevents dangerous insulin stacking during exercise, adapting dynamically to your physical activity.
 
 ---
 
 ## 🚀 Key Features
 
-### 1. Adaptive & Context-Aware Logic
-The calculator moves beyond simple I:C ratios. It applies sophisticated dynamic modifiers based on your current state:
-*   **Activity Modifiers**: Automatically adjusts for aerobic vs anaerobic impact.
-    *   *Running/Swimming*: **-30%** (Aerobic reduction)
-    *   *Beach Tennis*: **-20%** (Moderate aerobic)
-    *   *Gym/Weights*: **+10%** (Anaerobic rise)
-*   **Emotional Context**: Accounts for cortisol-induced spikes.
-    *   *Stress*: **+20%**
-*   **Feedback Loop**: The "Algorithm Within" learns from your logs. If you report a "Hypo" or "Hyper" event, the system auto-tunes your personal modifiers for future accuracy.
+### 1. Hybrid Computer Vision (RGB + Texture)
+Combines two layers of analysis to ensure no carb is left uncounted:
+*   **Semantic Layer (ResNet18)**: Identifies food types and estimates standard portions.
+*   **Texture Layer (Laplacian Variance)**: Detects surface roughness to "see" volume in monochromatic dishes (e.g., Rice, Mashed Potatoes).
+    *   *Safety Floor*: If the AI sees <10g but texture is high, the system enforces a minimum safety count (defaulting to ~30g).
+    *   *Density Boost*: For complex mixed dishes (like "Carreteiro"), high texture density triggers a boost multiplier to match real-world caloric density.
 
-### 2. Safety-First: The "Peak Window"
-We abandoned the traditional linear "Duration of Action" curve in favor of a stricter safety protocol.
-*   **Critical Danger Zone**: The system creates a hard lock on the **60-120 minute** window post-bolus.
-*   **Logic**: If exercise is detected within this peak insulin action window, the calculator triggers a **Maximum Safety Protocol**, applying a hard **-50% reduction** to prevent dangerous hypoglycemia.
-*   **Visual Status**: A live dashboard monitors this window, displaying **⚠️ PEAK ACTION** (High Risk) vs **✅ SAFE TAIL** (Low Risk).
+### 2. Safety-First "Peak Window" Logic
+Prevents hypoglycemia during physical activity:
+*   **The Problem**: Exercise increases insulin sensitivity. Correcting a high blood sugar *during* the peak action of a previous dose can lead to a crash.
+*   **The Solution**: The system monitors the **60-120 minute window** post-bolus.
+    *   If exercise is detected within this window, a **hard lock reduces the dose** or warns the user, visualizing the risk as **⚠️ PEAK ACTION**.
+    *   Outside this window, it switches to **✅ SAFE TAIL**, allowing standard corrections.
 
-### 3. Data-Driven Meal Builder
-Integrated with the comprehensive `manual-carboidratos.pdf` database (SBD/UFRGS), the app puts **1,200+ localized food items** at your fingertips.
-*   **Virtual Plate**: Search and combine multiple items (e.g., "Arroz Branco" + "Feijão").
-*   **Auto-Sum**: Automatically calculates total carbohydrates for precise dosing.
+### 3. Context-Aware Modifiers
+Instead of static ratios, Antigravity adjusts for activity types:
+*   **Aerobic (Run/Swim)**: Reduces bolus by ~30% to prevent drops.
+*   **Anaerobic (Gym/Weights)**: Increases bolus by ~10% to counteract stress-induced spikes.
+*   **Heuristic Learning**: The "Algorithm Within" learns from your logs. Reported a "Hypo"? It auto-tunes your modifiers for next time.
+
+### 4. Deploy Anywhere (Lite Mode)
+Built for flexibility:
+*   **Full Mode (Local)**: Uses PyTorch for full AI vision capabilities.
+*   **Lite Mode (Cloud/Vercel)**: Automatically detects if PyTorch is missing (due to slug size limits) and degrades gracefully to a manual-entry calculator with all the safety logic intact.
 
 ---
 
 ## 🛠️ Installation
+
+### Prerequisites
+*   Python 3.10+
+*   (Optional) CUDA-capable GPU for faster inference
 
 1.  **Clone the Repository**
     ```bash
@@ -46,29 +54,30 @@ Integrated with the comprehensive `manual-carboidratos.pdf` database (SBD/UFRGS)
     ```bash
     pip install -r requirements.txt
     ```
+    *Note: If deploying to a restricted environment (like Vercel free tier), remove `torch` and `torchvision` from requirements. The app will auto-switch to Lite Mode.*
 
-3.  **Initialize Database**
-    On first run, the system will automatically generate `diabetes.db` and ingest the food table.
-    *(Note: Maintain `food_table.md` in the root directory for data ingestion)*.
-
----
-
-## 💻 Usage
-
-1.  **Run the Application**
+3.  **Run the Application**
     ```bash
     python main.py
     ```
-    The interface will launch in your default web browser (Port 8081).
+    The interface will launch in your default web browser at `http://localhost:8080`.
 
-2.  **Check Status**: Glance at the top dashboard to see your current Risk State (Peak vs Safe).
-3.  **Build a Meal**: Click "Open Meal Builder" to search for foods and fill your carb count.
-4.  **Calculate**: Select your Activity and Emotion, then click Calculate. The app will provide a recommended dose with detailed logic explanations.
-5.  **Log & Learn**: Save the log. Later, use the **History Tab** to provide feedback ("Perfect", "Hypo", "Hyper") and watch the algorithm adapt your settings.
+---
+
+## 💻 Usage Flow
+
+1.  **Check Status**: Top dashboard shows your current IOB (Insulin on Board) risk state.
+2.  **Build Meal**:
+    *   **Vision**: Upload a photo. The Hybrid Engine will estimate carbs.
+    *   **Manual**: Search the integrated localized food database (1200+ items).
+3.  **Set Context**: Select your activity (e.g., "Going for a Run").
+4.  **Calculate**: The system processes Glucose + Carbs + Activity + history.
+    *   *Result*: A specific dose recommendation with a breakdown of "Why?" (e.g., "-30% due to Running").
+5.  **Log & Learn**: Save the log. Use the History tab later to report "Hypo" or "Perfect" to train your personal algorithm.
 
 ---
 
 ## ⚠️ Medical Disclaimer
 **THIS SOFTWARE IS FOR EXPERIMENTAL AND EDUCATIONAL PURPOSES ONLY.**
 
-It is **NOT** a certified medical device. The specific algorithms (Peak Window, Adaptive Modifiers) are experimental implementations. **Always** follow the advice of your endocrinologist and use your standard glucose meter/CGM for treatment decisions. The developer assumes no liability for health outcomes.
+It is **NOT** a certified medical device. The specific algorithms (Peak Window, Adaptive Modifiers, Hybrid Vision) are experimental implementations. **Always** follow the advice of your endocrinologist and use your standard glucose meter/CGM for treatment decisions. The developer assumes no liability for health outcomes.
