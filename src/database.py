@@ -225,4 +225,49 @@ def init_db():
         session.commit()
         print("Default user created: admin / admin")
         
+    # Auto-populate foods if empty and food_table.md exists
+    if session.query(Food).count() == 0:
+        import os
+        md_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "food_table.md")
+        if os.path.exists(md_path):
+            print("Database has no food items. Populating from data/food_table.md...")
+            try:
+                with open(md_path, "r", encoding="utf-8") as f:
+                    lines = f.readlines()
+                foods_to_add = []
+                for line in lines:
+                    line = line.strip()
+                    if not line.startswith("|"):
+                        continue
+                    content = line.strip("|")
+                    parts = content.split("|")
+                    if len(parts) < 3:
+                        continue
+                    raw_name = parts[0].strip()
+                    raw_measure = parts[1].strip()
+                    raw_cho = parts[2].strip()
+                    if "Nome do Alimento" in raw_name or "---" in raw_name or "Edição n" in raw_name:
+                        continue
+                    try:
+                        if not raw_cho:
+                            continue
+                        cho = float(raw_cho)
+                        kcal = 0
+                        if len(parts) >= 4:
+                            try:
+                                raw_kcal = parts[3].strip()
+                                if raw_kcal:
+                                    kcal = int(float(raw_kcal))
+                            except ValueError:
+                                kcal = 0
+                        foods_to_add.append(Food(name=raw_name, measure=raw_measure, carbs=cho, kcal=kcal))
+                    except ValueError:
+                        continue
+                if foods_to_add:
+                    session.bulk_save_objects(foods_to_add)
+                    session.commit()
+                    print(f"Successfully auto-populated {len(foods_to_add)} food items.")
+            except Exception as e:
+                print(f"Error auto-populating food: {e}")
+
     session.close()
