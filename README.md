@@ -1,4 +1,4 @@
-# ANTIGRAVITY: Hybrid Vision Bolus Calculator
+# Diabetes Manager: Hybrid Vision Bolus Calculator
 
 ![Python](https://img.shields.io/badge/Python-3.11+-blue?style=for-the-badge&logo=python) ![NiceGUI](https://img.shields.io/badge/UI-NiceGUI-orange?style=for-the-badge) ![Database](https://img.shields.io/badge/Database-SQLite-lightgrey?style=for-the-badge) ![Status](https://img.shields.io/badge/Status-Experimental-red?style=for-the-badge)
 
