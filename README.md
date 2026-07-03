@@ -3,7 +3,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11+-blue?style=for-the-badge&logo=python) ![NiceGUI](https://img.shields.io/badge/UI-NiceGUI-orange?style=for-the-badge) ![Database](https://img.shields.io/badge/Database-SQLite-lightgrey?style=for-the-badge) ![Status](https://img.shields.io/badge/Status-Experimental-red?style=for-the-badge)
 
 ## About
-**Antigravity** is an advanced, context-aware insulin calculator for Type 1 Diabetics, specifically engineered to solve the "invisible food" problem in computer vision. It combines a **Deep Learning semantic layer** (ResNet18) with a **Classic CV texture layer** to estimate carbohydrate content in low-contrast meals (e.g., white rice on white plates) that standard AI models often miss.
+**Diabetes Manager** is an advanced, context-aware insulin calculator for Type 1 Diabetics, specifically engineered to solve the "invisible food" problem in computer vision. It combines a **Deep Learning semantic layer** (ResNet18) with a **Classic CV texture layer** to estimate carbohydrate content in low-contrast meals (e.g., white rice on white plates) that standard AI models often miss.
 
 Beyond vision, it features a safety-first **"Peak Window" logic** that prevents dangerous insulin stacking during exercise and adapts dynamically to both physical activities and emotional states.
 
