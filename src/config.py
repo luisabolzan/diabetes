@@ -6,3 +6,4 @@ SUPABASE_KEY = None
 supabase = None
 
 print("DEBUG: Supabase client disabled by project policy to fix DNS issues.")
+

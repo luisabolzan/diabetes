@@ -1,6 +1,7 @@
 import socket
 import requests
-from src.config import SUPABASE_URL
+SUPABASE_URL = "https://zxrontqiwlmcauuzlnkk.supabase.co"
+
 
 print(f"Testing URL: {SUPABASE_URL}")
 

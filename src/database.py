@@ -31,6 +31,10 @@ class Settings(Base):
     height = Column(Float, default=170.0) # cm
     gender = Column(String, default='Neutral') # Male/Female/Neutral
     
+    # Dynamic Modifiers (Emotion)
+    mod_stress = Column(Float, default=0.20)
+    mod_anxious = Column(Float, default=0.10)
+    
 
 
 class Log(Base):
@@ -41,6 +45,7 @@ class Log(Base):
     glucose = Column(Integer)
     carbs = Column(Integer)
     activity = Column(String)
+    emotion = Column(String, default='Calm')
 
     recommended_dose = Column(Float)
     actual_dose = Column(Float)
@@ -153,6 +158,45 @@ def init_db():
         session.rollback()
         try:
             session.execute(text("ALTER TABLE settings ADD COLUMN gender VARCHAR DEFAULT 'Neutral'"))
+            session.commit()
+            print("Migration successful.")
+        except Exception as e:
+            print(f"Migration failed: {e}")
+
+    # Auto-migration for 'mod_stress'
+    try:
+        session.execute(text("SELECT mod_stress FROM settings LIMIT 1"))
+    except Exception:
+        print("Migrating DB: Adding mod_stress column...")
+        session.rollback()
+        try:
+            session.execute(text("ALTER TABLE settings ADD COLUMN mod_stress FLOAT DEFAULT 0.20"))
+            session.commit()
+            print("Migration successful.")
+        except Exception as e:
+            print(f"Migration failed: {e}")
+
+    # Auto-migration for 'mod_anxious'
+    try:
+        session.execute(text("SELECT mod_anxious FROM settings LIMIT 1"))
+    except Exception:
+        print("Migrating DB: Adding mod_anxious column...")
+        session.rollback()
+        try:
+            session.execute(text("ALTER TABLE settings ADD COLUMN mod_anxious FLOAT DEFAULT 0.10"))
+            session.commit()
+            print("Migration successful.")
+        except Exception as e:
+            print(f"Migration failed: {e}")
+
+    # Auto-migration for 'emotion' in logs
+    try:
+        session.execute(text("SELECT emotion FROM logs LIMIT 1"))
+    except Exception:
+        print("Migrating DB: Adding emotion column to logs...")
+        session.rollback()
+        try:
+            session.execute(text("ALTER TABLE logs ADD COLUMN emotion VARCHAR DEFAULT 'Calm'"))
             session.commit()
             print("Migration successful.")
         except Exception as e:
