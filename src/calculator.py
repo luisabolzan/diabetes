@@ -167,7 +167,6 @@ class InsulinCalculator:
                        current_glucose: int, 
                        carbs: int, 
                        activity: str, 
-                       emotion: str, 
                        history: List[Log],
                        duration_minutes: int = 0,
                        intensity: str = "Moderate", # Slow, Moderate, Fast
@@ -191,15 +190,6 @@ class InsulinCalculator:
         gross_insulin = carb_insulin + correction_insulin
         
         # 2. Contextual Modifiers
-        
-        # Emotion Factors
-        emotion_factors = {
-            "Stress": self.settings.mod_stress,
-            "Anxious": self.settings.mod_anxious,
-            "Calm": 0.0
-        }
-        
-        emo_mod = emotion_factors.get(emotion, 0.0)
         
         # Calculate Activity Modifiers using helper
         act_calc_results = self.calculate_activity_modifier(activity, duration_minutes, intensity, user_weight)
@@ -233,15 +223,11 @@ class InsulinCalculator:
             risk_state = "HIGH"
         else:
             # Standard Logic
-            if act_mod < 0 and emo_mod > 0:
-                final_modifier = act_mod
-                notes = f"Priority Rule: Ignored emotion.{full_activity_note}"
+            final_modifier = act_mod
+            if full_activity_note:
+                notes = f"Standard.{full_activity_note}"
             else:
-                final_modifier = act_mod + emo_mod
-                if full_activity_note:
-                    notes = f"Standard.{full_activity_note}"
-                else:
-                    notes = "Standard modifiers applied."
+                notes = "Standard modifiers applied."
             
         adjusted_insulin = gross_insulin * (1 + final_modifier)
         
@@ -264,7 +250,6 @@ class InsulinCalculator:
             "correction_dose": correction_insulin,
             "gross_dose": gross_insulin,
             "activity_modifier": act_mod,
-            "emotion_modifier": emo_mod,
             "final_modifier_used": final_modifier,
             "adjusted_dose": adjusted_insulin,
             "final_dose_raw": final_dose,

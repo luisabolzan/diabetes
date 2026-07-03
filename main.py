@@ -52,8 +52,6 @@ def save_settings(s_input):
     settings.mod_swim = float(s_input.get('mod_swim', settings.mod_swim))
     settings.mod_beach_tennis = float(s_input.get('mod_beach_tennis', settings.mod_beach_tennis))
     settings.mod_walking = float(s_input.get('mod_walking', settings.mod_walking))
-    settings.mod_stress = float(s_input.get('mod_stress', settings.mod_stress))
-    settings.mod_anxious = float(s_input.get('mod_anxious', settings.mod_anxious))
     
     session.commit()
     session.close()
@@ -466,11 +464,6 @@ def main_page():
                     label='Intensity (Speed/Effort)', value='Moderate'
                 ).classes('w-full q-mt-sm input-field').props('filled behavior=menu')
                 
-                emotion_select = ui.select(
-                    ['Calm', 'Stress', 'Anxious'], 
-                    label='Emotion', value='Calm'
-                ).classes('w-full q-mt-sm input-field').props('filled behavior=menu')
-                
 
                 result_area = ui.column().classes('w-full q-mt-lg hidden')
                 
@@ -489,7 +482,7 @@ def main_page():
                         ui.notify('Invalid Input', type='negative', color='red-5')
                         return
 
-                    res = calc.calculate_dose(g, c, activity_select.value, emotion_select.value, history, 
+                    res = calc.calculate_dose(g, c, activity_select.value, history, 
                                               duration_minutes=int(duration_input.value or 0),
                                               intensity=intensity_select.value,
                                               user_weight=current_settings.weight,
@@ -535,7 +528,6 @@ def main_page():
                                 - Correction: {res['correction_dose']:.2f} u
                             - **Modifiers**:
                                 - Activity: {res['activity_modifier']:.0%} {res['notes']}
-                                - Emotion: {res['emotion_modifier']:.0%}
                                 - *Final Used*: {res['final_modifier_used']:.0%}
                             - **Adjusted**: {res['adjusted_dose']:.2f} u
                             """)
@@ -544,7 +536,6 @@ def main_page():
                             "glucose": g,
                             "carbs": c,
                             "activity": activity_select.value,
-                            "emotion": emotion_select.value,
                             "recommended_dose": res['recommended_dose'],
                             "actual_dose": res['recommended_dose'], 
                             "timestamp": datetime.now()
@@ -636,9 +627,7 @@ def main_page():
                     'mod_run': current_s.mod_run,
                     'mod_swim': current_s.mod_swim,
                     'mod_beach_tennis': current_s.mod_beach_tennis,
-                    'mod_walking': current_s.mod_walking,
-                    'mod_stress': current_s.mod_stress,
-                    'mod_anxious': current_s.mod_anxious
+                    'mod_walking': current_s.mod_walking
                 }
                 
                 ui.label('Insulin-to-Carb Ratios').classes('text-subtitle2 q-mt-sm text-emerald-700 dark:text-cyan-500')
@@ -655,8 +644,6 @@ def main_page():
                     ui.number('Gym', value=s_values['mod_gym'], on_change=lambda e: s_values.update({'mod_gym': e.value})).classes('input-field').props('filled')
                     ui.number('Swim', value=s_values['mod_swim'], on_change=lambda e: s_values.update({'mod_swim': e.value})).classes('input-field').props('filled')
                     ui.number('Beach Tennis', value=s_values['mod_beach_tennis'], on_change=lambda e: s_values.update({'mod_beach_tennis': e.value})).classes('input-field').props('filled')
-                    ui.number('Stress', value=s_values['mod_stress'], on_change=lambda e: s_values.update({'mod_stress': e.value})).classes('input-field').props('filled')
-                    ui.number('Anxious', value=s_values['mod_anxious'], on_change=lambda e: s_values.update({'mod_anxious': e.value})).classes('input-field').props('filled')
 
                 ui.label('Personal Factors').classes('text-subtitle2 q-mt-lg text-emerald-700 dark:text-cyan-500')
                 with ui.grid(columns=2).classes('gap-4'):
@@ -699,7 +686,7 @@ def main_page():
                                 ui.label(f"{l.actual_dose} u").classes('text-cyan-400 font-black text-xl')
                             with ui.row().classes('w-full items-center gap-4 text-sm text-gray-400 q-mt-sm'):
                                 ui.label(f"Glu: {l.glucose} | Carb: {l.carbs}")
-                                ui.label(f"{l.activity} | {l.emotion}")
+                                ui.label(f"{l.activity}")
                             
                             fb_text = l.feedback.outcome if l.feedback else "No Feedback"
                             fb_colors = {'Perfect': 'green-400', 'Hypo': 'red-400', 'Hyper': 'orange-400', 'No Feedback': 'grey-600'}

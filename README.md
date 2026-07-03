@@ -5,7 +5,7 @@
 ## About
 **Diabetes Manager** is an advanced, context-aware insulin calculator for Type 1 Diabetics, specifically engineered to solve the "invisible food" problem in computer vision. It combines a **Deep Learning semantic layer** (ResNet18) with a **Classic CV texture layer** to estimate carbohydrate content in low-contrast meals (e.g., white rice on white plates) that standard AI models often miss.
 
-Beyond vision, it features a safety-first **"Peak Window" logic** that prevents dangerous insulin stacking during exercise and adapts dynamically to both physical activities and emotional states.
+Beyond vision, it features a safety-first **"Peak Window" logic** that prevents dangerous insulin stacking during exercise and adapts dynamically to physical activities.
 
 ---
 
@@ -27,14 +27,10 @@ Fully self-contained user registry and authentication system:
     *   **Email:** `admin@example.com`
     *   **Password:** `admin`
 
-### 3. Context-Aware Modifiers (Activity & Emotion)
-Instead of static ratios, Antigravity adjusts dynamically for:
-*   **Physical Activities**:
-    *   *Aerobic (Walking, Running, Swimming, Beach Tennis)*: Reduces bolus dynamically (up to ~30%) to prevent hypoglycemia.
-    *   *Anaerobic (Gym/Weights)*: Increases bolus (~10%) to counteract stress-induced spikes.
-*   **Emotional States**:
-    *   *Stress / Anxiety*: Adjusts insulin sensitivity parameters (+20% for stress, +10% for anxiety) to manage hormone-induced hyperglycemia.
-    *   *Priority Rule*: If physical activity reduces the dose and emotional factors increase it, the safety protocol prioritizes the activity modifier to prevent drops.
+### 3. Context-Aware Modifiers (Activity)
+Instead of static ratios, Diabetes Manager adjusts dynamically for physical activities:
+*   *Aerobic (Walking, Running, Swimming, Beach Tennis)*: Reduces bolus dynamically (up to ~30%) to prevent hypoglycemia.
+*   *Anaerobic (Gym/Weights)*: Increases bolus (~10%) to counteract stress-induced spikes.
 
 ### 4. Safety-First "Peak Window" Logic
 Prevents hypoglycemia during physical activity:
@@ -77,8 +73,8 @@ Prevents hypoglycemia during physical activity:
 2.  **Build Meal**:
     *   **Vision**: Upload a photo. The Hybrid Engine estimates carbs.
     *   **Manual**: Search the integrated localized food database.
-3.  **Set Context**: Select your physical activity, duration, intensity, and current emotional state (Calm, Stress, Anxious).
-4.  **Calculate**: The system processes glucose levels, carbs, activity, emotion, and active history.
+3.  **Set Context**: Select your physical activity, duration, and intensity.
+4.  **Calculate**: The system processes glucose levels, carbs, activity, and active history.
     *   *Result*: A specific dose recommendation with detailed calculation breakdown.
 5.  **Log & Learn**: Save the log. Use the History tab later to review logs, save feedback, or delete entries.
 
