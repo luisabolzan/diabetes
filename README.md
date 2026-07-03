@@ -1,11 +1,11 @@
 # ANTIGRAVITY: Hybrid Vision Bolus Calculator
 
-![Python](https://img.shields.io/badge/Python-3.12-blue?style=for-the-badge&logo=python) ![NiceGUI](https://img.shields.io/badge/UI-NiceGUI-orange?style=for-the-badge) ![Status](https://img.shields.io/badge/Status-Experimental-red?style=for-the-badge)
+![Python](https://img.shields.io/badge/Python-3.11+-blue?style=for-the-badge&logo=python) ![NiceGUI](https://img.shields.io/badge/UI-NiceGUI-orange?style=for-the-badge) ![Database](https://img.shields.io/badge/Database-SQLite-lightgrey?style=for-the-badge) ![Status](https://img.shields.io/badge/Status-Experimental-red?style=for-the-badge)
 
 ## About
-**Antigravity** is an advanced, context-aware insulin calculator for Type 1 Diabetics, specifically engineered to solve the "invisible food" problem in computer vision. It combines a **Deep Learning semantic layer** (ResNet18) with a **Classic CV texture layer** to accurately estimate carbohydrate content in low-contrast meals (e.g., white rice on white plates) that standard AI models often miss.
+**Antigravity** is an advanced, context-aware insulin calculator for Type 1 Diabetics, specifically engineered to solve the "invisible food" problem in computer vision. It combines a **Deep Learning semantic layer** (ResNet18) with a **Classic CV texture layer** to estimate carbohydrate content in low-contrast meals (e.g., white rice on white plates) that standard AI models often miss.
 
-Beyond vision, it features a safety-first "Peak Window" logic that prevents dangerous insulin stacking during exercise, adapting dynamically to your physical activity.
+Beyond vision, it features a safety-first **"Peak Window" logic** that prevents dangerous insulin stacking during exercise and adapts dynamically to both physical activities and emotional states.
 
 ---
 
@@ -14,35 +14,42 @@ Beyond vision, it features a safety-first "Peak Window" logic that prevents dang
 ### 1. Hybrid Computer Vision (RGB + Texture)
 Combines two layers of analysis to ensure no carb is left uncounted:
 *   **Semantic Layer (ResNet18)**: Identifies food types and estimates standard portions.
-*   **Texture Layer (Laplacian Variance)**: Detects surface roughness to "see" volume in monochromatic dishes (e.g., Rice, Mashed Potatoes).
-    *   *Safety Floor*: If the AI sees <10g but texture is high, the system enforces a minimum safety count (defaulting to ~30g).
-    *   *Density Boost*: For complex mixed dishes (like "Carreteiro"), high texture density triggers a boost multiplier to match real-world caloric density.
+*   **Texture Layer (Laplacian Variance)**: Detects surface roughness to "see" volume in monochromatic dishes.
+    *   *Safety Floor*: If the AI sees < 10g but texture is high, the system enforces a minimum safety count (defaulting to ~30g).
+    *   *Density Boost*: For complex mixed dishes (like "Carreteiro"), high texture density triggers a boost multiplier.
 
-### 2. Safety-First "Peak Window" Logic
+### 2. SQLite-Backed Local Authentication
+Fully self-contained user registry and authentication system:
+*   No external APIs or cloud services (like Supabase) are required.
+*   Secure local password hashing using `SHA256` and random cryptographic `salt`.
+*   Auto-migration schema: The database automatically initializes and updates its columns (e.g., adding sports, personal parameters, and custom values) on startup.
+*   **Default Admin Account**:
+    *   **Email:** `admin@example.com`
+    *   **Password:** `admin`
+
+### 3. Context-Aware Modifiers (Activity & Emotion)
+Instead of static ratios, Antigravity adjusts dynamically for:
+*   **Physical Activities**:
+    *   *Aerobic (Walking, Running, Swimming, Beach Tennis)*: Reduces bolus dynamically (up to ~30%) to prevent hypoglycemia.
+    *   *Anaerobic (Gym/Weights)*: Increases bolus (~10%) to counteract stress-induced spikes.
+*   **Emotional States**:
+    *   *Stress / Anxiety*: Adjusts insulin sensitivity parameters (+20% for stress, +10% for anxiety) to manage hormone-induced hyperglycemia.
+    *   *Priority Rule*: If physical activity reduces the dose and emotional factors increase it, the safety protocol prioritizes the activity modifier to prevent drops.
+
+### 4. Safety-First "Peak Window" Logic
 Prevents hypoglycemia during physical activity:
 *   **The Problem**: Exercise increases insulin sensitivity. Correcting a high blood sugar *during* the peak action of a previous dose can lead to a crash.
 *   **The Solution**: The system monitors the **60-120 minute window** post-bolus.
-    *   If exercise is detected within this window, a **hard lock reduces the dose** or warns the user, visualizing the risk as **⚠️ PEAK ACTION**.
+    *   If exercise is detected within this window, a **hard safety lock reduces the dose by 50%**, warning the user with a **⚠️ PEAK ACTION** notification.
     *   Outside this window, it switches to **✅ SAFE TAIL**, allowing standard corrections.
-
-### 3. Context-Aware Modifiers
-Instead of static ratios, Antigravity adjusts for activity types:
-*   **Aerobic (Run/Swim)**: Reduces bolus by ~30% to prevent drops.
-*   **Anaerobic (Gym/Weights)**: Increases bolus by ~10% to counteract stress-induced spikes.
-*   **Heuristic Learning**: The "Algorithm Within" learns from your logs. Reported a "Hypo"? It auto-tunes your modifiers for next time.
-
-### 4. Deploy Anywhere (Lite Mode)
-Built for flexibility:
-*   **Full Mode (Local)**: Uses PyTorch for full AI vision capabilities.
-*   **Lite Mode (Cloud/Vercel)**: Automatically detects if PyTorch is missing (due to slug size limits) and degrades gracefully to a manual-entry calculator with all the safety logic intact.
 
 ---
 
-## 🛠️ Installation
+## 🛠️ Installation & Run
 
 ### Prerequisites
 *   Python 3.10+
-*   (Optional) CUDA-capable GPU for faster inference
+*   (Optional) CUDA-capable GPU for faster PyTorch vision calculations
 
 1.  **Clone the Repository**
     ```bash
@@ -54,7 +61,7 @@ Built for flexibility:
     ```bash
     pip install -r requirements.txt
     ```
-    *Note: If deploying to a restricted environment (like Vercel free tier), remove `torch` and `torchvision` from requirements. The app will auto-switch to Lite Mode.*
+    *Note: If deploying to a restricted environment, remove `torch` and `torchvision` from requirements. The app will auto-switch to Lite Mode.*
 
 3.  **Run the Application**
     ```bash
@@ -66,14 +73,14 @@ Built for flexibility:
 
 ## 💻 Usage Flow
 
-1.  **Check Status**: Top dashboard shows your current IOB (Insulin on Board) risk state.
+1.  **Check Status**: Top dashboard shows your current IOB (Insulin on Board) safety risk state based on the time since your last dose.
 2.  **Build Meal**:
-    *   **Vision**: Upload a photo. The Hybrid Engine will estimate carbs.
-    *   **Manual**: Search the integrated localized food database (1200+ items).
-3.  **Set Context**: Select your activity (e.g., "Going for a Run").
-4.  **Calculate**: The system processes Glucose + Carbs + Activity + history.
-    *   *Result*: A specific dose recommendation with a breakdown of "Why?" (e.g., "-30% due to Running").
-5.  **Log & Learn**: Save the log. Use the History tab later to report "Hypo" or "Perfect" to train your personal algorithm.
+    *   **Vision**: Upload a photo. The Hybrid Engine estimates carbs.
+    *   **Manual**: Search the integrated localized food database.
+3.  **Set Context**: Select your physical activity, duration, intensity, and current emotional state (Calm, Stress, Anxious).
+4.  **Calculate**: The system processes glucose levels, carbs, activity, emotion, and active history.
+    *   *Result*: A specific dose recommendation with detailed calculation breakdown.
+5.  **Log & Learn**: Save the log. Use the History tab later to review logs, save feedback, or delete entries.
 
 ---
 
